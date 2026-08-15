@@ -31,6 +31,8 @@ dhs-gui/
 │   ├── main.ts                # 主进程：spawn DHS host + 窗口生命周期
 │   ├── preload.ts             # preload 桥（IPC 载体，P1 启用）
 │   └── renderer/              # 渲染层（自绘 UI，预留）
+├── plugins/
+│   └── dsh-discovery/         # 自研 DHS 插件：插件搜索器（浏览 GitHub 社区插件）
 ├── platform/
 │   ├── windows/               # Windows 打包（electron-builder 配置）
 │   └── macos/                 # 预留
@@ -148,3 +150,4 @@ main（稳定） ←── feature/*（开发，--no-ff 合并）
 | 日期 | 变更内容 | 原因 |
 |------|----------|------|
 | 2026-08-15 | 初始创建（P0 完成：webui→gui + 对话链路全通） | POC 验收通过 |
+| 2026-08-15 | 自研 dsh-discovery 插件搜索器（浏览/搜索/已安装标识/检查更新/中英搜索） | 替代第三方 dshmarket |

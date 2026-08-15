@@ -32,3 +32,8 @@ Desktop.ini
 release/
 install/*.exe
 install/*.msi
+
+# ── dsh-discovery 插件构建产物与第三方 fork ──
+plugins/dsh-discovery/lib/
+plugins/dsh-discovery/client/
+vendor/
