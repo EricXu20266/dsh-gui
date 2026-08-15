@@ -543,7 +543,7 @@ function DiscoveryBrowser({ t, ctx, onClose }: { t: Translate; ctx: DiscoveryCli
           key: c.id,
           style: cat === c.id ? catOnStyle : catStyle,
           onClick: () => setCat(c.id),
-        }, `${c.label} (${c.count})`)),
+        }, `${t('category_' + c.id)} (${c.count})`)),
       ),
       h('div', { style: { fontSize: 11, color: 'var(--dsw-alias-label-secondary, #7c7c9c)', marginBottom: 10 } },
         t('total').replace('{n}', String(listing?.total ?? 0)) + ' · ' + t('fetchedFrom'),
