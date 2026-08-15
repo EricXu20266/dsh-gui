@@ -344,6 +344,8 @@ ipcMain.handle('setup:install', async (_e, config: { registry: string; proxy: st
 })
 
 app.whenReady().then(async () => {
+  // 移除默认菜单栏（File/Edit/View/Window/Help）——桌面应用不需要
+  Menu.setApplicationMenu(null)
   // 首次启动：DHS 依赖未就绪 → 打开安装向导；已就绪 → 直接启动主界面
   if (!isDhsInstalled()) {
     console.log('[dsh-gui] DHS 依赖未安装，打开安装向导')
