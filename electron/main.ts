@@ -391,17 +391,36 @@ function waitForPort(port: number, timeoutMs = 30000): Promise<void> {
   })
 }
 
+/** 组装 host 版本信息 env（dsh-about 插件读取并展示在设置 → 关于） */
+function resolveVersionEnv(): Record<string, string> {
+  const readVersion = (p: string): string => {
+    try {
+      return (JSON.parse(readFileSync(p, 'utf8')) as { version?: string }).version ?? ''
+    } catch {
+      return ''
+    }
+  }
+  return {
+    DSH_GUI_NAME: 'dsh-gui',
+    DSH_GUI_VERSION: app.getVersion(),
+    DSH_KERNEL_VERSION: readVersion(join(DHS_ROOT, 'apps', 'cli', 'package.json')),
+    DSH_ELECTRON_VERSION: process.versions.electron ?? '',
+    DSH_NODE_VERSION: process.versions.node ?? '',
+  }
+}
+
 /** 启动 DHS host 子进程，返回其监听端口 */
 async function startHost(): Promise<number> {
   const proxyEnv = resolveHostProxyEnv()
   if (Object.keys(proxyEnv).length > 0) {
     console.log(`[dsh-gui] host proxy: ${proxyEnv.HTTP_PROXY} (NODE_USE_ENV_PROXY=1)`)
   }
+  const versionEnv = resolveVersionEnv()
   hostProc = spawn(resolveNodeBin(), ['apps/cli/lib/bin.js', '--profile', 'web'], {
     cwd: DHS_ROOT,
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, ...proxyEnv },
+    env: { ...process.env, ...proxyEnv, ...versionEnv },
   })
   hostProc.stdout?.on('data', (d) => process.stdout.write(`[host] ${d}`))
   hostProc.stderr?.on('data', (d) => process.stderr.write(`[host:err] ${d}`))

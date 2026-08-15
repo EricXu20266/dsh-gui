@@ -2,6 +2,7 @@
 # 注意：嵌套 workspace 不生效，必须把 DHS 的所有 packages glob 在此展开
 packages:
   - "."
+  - "plugins/*"
   - "../deepseek-harness"
   - "../deepseek-harness/vendor/*"
   - "../deepseek-harness/packages/*/*"
