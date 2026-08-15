@@ -127,6 +127,7 @@ function SkillPanel({ t, ctx, onClose }: { t: Translate; ctx: DiscoveryClientCon
   const [skills, setSkills] = useState<SkillInfo[] | null>(null)
   const [detail, setDetail] = useState<SkillDetail | null>(null)
   const [error, setError] = useState('')
+  const [view, setView] = useState<'all' | 'source' | 'group'>('all')
 
   const load = (): void => {
     setError('')
@@ -145,8 +146,38 @@ function SkillPanel({ t, ctx, onClose }: { t: Translate; ctx: DiscoveryClientCon
       .catch(() => setError(t('loadFail')))
   }
 
-  const toggle = (name: string, key: 'modelInvocable' | 'userInvocable'): void => {
+  const toggle = (name: string, key: 'modelInvocable' | 'userInvocable', silent = false): void => {
     fetch(`/dsh-skillmanager/toggle?name=${encodeURIComponent(name)}&key=${key}`, { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((body: { ok?: boolean; error?: string }) => {
+        if (body.ok) { if (!silent) load() }
+        else if (!silent) setError(body.error ?? t('toggleFail'))
+      })
+      .catch(() => { if (!silent) setError(t('toggleFail')) })
+  }
+
+  // 批量：组内全部启用/禁用（model+user 双开关）
+  const batchToggle = (list: SkillInfo[], target: 'on' | 'off'): void => {
+    for (const skill of list) {
+      const wantOn = target === 'on'
+      if (skill.invocation.modelInvocable !== wantOn) toggle(skill.name, 'modelInvocable', true)
+      if (skill.invocation.userInvocable !== wantOn) toggle(skill.name, 'userInvocable', true)
+    }
+    setTimeout(load, 400)
+  }
+
+  // 设置合集（group/subgroup）——简单交互：prompt 输入
+  const setGroup = (skill: SkillInfo): void => {
+    const current = skill.group ?? ''
+    const group = window.prompt(`${t('setGroup')} — ${t('groupNamePh')}`, current)
+    if (group === null) return
+    const subgroup = window.prompt(t('subgroupNamePh'), skill.subgroup ?? '')
+    if (subgroup === null) return
+    fetch('/dsh-skillmanager/group', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: skill.name, group: group.trim() || null, subgroup: subgroup.trim() || null }),
+    })
       .then((res) => res.json())
       .then((body: { ok?: boolean; error?: string }) => {
         if (body.ok) load()
@@ -164,60 +195,100 @@ function SkillPanel({ t, ctx, onClose }: { t: Translate; ctx: DiscoveryClientCon
     void openSessionAndSend(ctx, buildCreatePrompt(t))
   }
 
-  // 按来源分组（SOURCE_ORDER 优先，其余按字典序）
-  const groups = new Map<string, SkillInfo[]>()
-  for (const skill of skills ?? []) {
-    const list = groups.get(skill.source) ?? []
+  const all = skills ?? []
+
+  // 视图分组
+  const renderGroup = (label: string, list: SkillInfo[]): ReactNode => h('div', { key: label },
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, margin: '10px 0 6px' } },
+      h('span', { style: { fontSize: 11, fontWeight: 600, color: '#57606a' } }, `${label} (${list.length})`),
+      h('span', { style: { flex: 1 } }),
+      h('button', { type: 'button', style: btnStyle, onClick: () => batchToggle(list, 'on') }, t('enableAll')),
+      h('button', { type: 'button', style: btnStyle, onClick: () => batchToggle(list, 'off') }, t('disableAll')),
+    ),
+    list.map((skill) => renderSkill(skill)),
+  )
+
+  const renderSkill = (skill: SkillInfo): ReactNode => h('div', { key: skill.name, style: itemStyle },
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
+      h('span', { style: nameStyle }, skill.name),
+      h('span', { style: badgeStyle }, skill.provider),
+      skill.group !== undefined && h('span', { style: { fontSize: 10, padding: '1px 7px', borderRadius: 9, background: '#eef2ff', color: '#4f46e5', marginRight: 6 } },
+        skill.subgroup !== undefined ? `${skill.group} / ${skill.subgroup}` : skill.group),
+      h('span', { style: { flex: 1 } }),
+      h('button', { type: 'button', style: btnStyle, onClick: () => setGroup(skill) }, t('setGroup')),
+      h('button', {
+        type: 'button',
+        style: skill.invocation.modelInvocable ? toggleOnStyle : toggleOffStyle,
+        onClick: () => toggle(skill.name, 'modelInvocable'),
+        title: t('modelInvoke'),
+      }, `${t('modelInvoke')}: ${skill.invocation.modelInvocable ? t('enabled') : t('disabled')}`),
+      h('button', {
+        type: 'button',
+        style: skill.invocation.userInvocable ? toggleOnStyle : toggleOffStyle,
+        onClick: () => toggle(skill.name, 'userInvocable'),
+        title: t('userInvoke'),
+      }, `${t('userInvoke')}: ${skill.invocation.userInvocable ? t('enabled') : t('disabled')}`),
+      h('button', { type: 'button', style: btnStyle, onClick: () => openDetail(skill.name) }, t('viewDetail')),
+      h('button', { type: 'button', style: btnStyle, onClick: () => review(skill) }, t('reviewSkill')),
+    ),
+    h('div', { style: descStyle }, skill.description),
+    h('div', { style: metaStyle }, skill.whenToUse !== undefined ? `${t('whenToUse')}: ${skill.whenToUse}` : ''),
+    detail !== null && detail.name === skill.name && h('div', { style: contentStyle },
+      detail.path !== undefined && h('div', { style: metaStyle }, `${t('path')}: ${detail.path}`),
+      h('div', { style: { fontWeight: 600, margin: '6px 0 3px' } }, `${t('contentPreview')} (${detail.content.length} chars)`),
+      detail.content,
+    ),
+  )
+
+  // 按来源分组
+  const bySource = new Map<string, SkillInfo[]>()
+  for (const skill of all) {
+    const list = bySource.get(skill.source) ?? []
     list.push(skill)
-    groups.set(skill.source, list)
+    bySource.set(skill.source, list)
   }
-  const orderedSources = [...groups.keys()].sort((a, b) => {
+  const orderedSources = [...bySource.keys()].sort((a, b) => {
     const ia = SOURCE_ORDER.indexOf(a as never)
     const ib = SOURCE_ORDER.indexOf(b as never)
     return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b)
   })
 
+  // 按合集分组
+  const byGroup = new Map<string, SkillInfo[]>()
+  for (const skill of all) {
+    const key = skill.group ?? ''
+    const list = byGroup.get(key) ?? []
+    list.push(skill)
+    byGroup.set(key, list)
+  }
+  const orderedGroups = [...byGroup.keys()].sort((a, b) => {
+    if (a === '') return 1
+    if (b === '') return -1
+    return a.localeCompare(b, 'zh')
+  })
+
+  const viewBtn = (id: 'all' | 'source' | 'group', label: string): ReactNode => h('button', {
+    type: 'button',
+    style: view === id ? { ...btnStyle, background: '#4176e6', borderColor: '#4176e6', color: '#fff' } : btnStyle,
+    onClick: () => setView(id),
+  }, label)
+
   return h('div', { style: { height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 } },
-    h('div', { style: { padding: '12px 16px', borderBottom: '1px solid var(--dsw-alias-divider, #ececf2)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' } },
+    h('div', { style: { padding: '12px 16px', borderBottom: '1px solid var(--dsw-alias-divider, #ececf2)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
       h('button', { type: 'button', style: primaryBtn, onClick: create }, `+ ${t('createSkill')}`),
-      h('span', { style: { fontSize: 11, color: 'var(--dsw-alias-label-secondary, #7c7c9c)' } }, t('createSkillNote')),
+      h('span', { style: { flex: 1 } }),
+      viewBtn('all', t('viewAll')),
+      viewBtn('source', t('viewSource')),
+      viewBtn('group', t('viewGroup')),
     ),
     error !== '' && h('div', { style: emptyStyle }, error),
     skills === null && !error && h('div', { style: emptyStyle }, t('loading')),
     skills !== null && skills.length === 0 && h('div', { style: emptyStyle }, t('empty')),
     skills !== null && h('div', { style: { flex: 1, overflowY: 'auto', padding: 12 } },
       h('div', { style: { fontSize: 11, color: 'var(--dsw-alias-label-secondary, #7c7c9c)', marginBottom: 8 } }, t('total').replace('{n}', String(skills.length))),
-      orderedSources.map((source) => h('div', { key: source },
-        h('div', { style: { fontSize: 11, fontWeight: 600, color: '#57606a', margin: '10px 0 6px' } }, `${sourceLabel(source)} (${groups.get(source)!.length})`),
-        groups.get(source)!.map((skill) => h('div', { key: skill.name, style: itemStyle },
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
-            h('span', { style: nameStyle }, skill.name),
-            h('span', { style: badgeStyle }, skill.provider),
-            h('span', { style: { flex: 1 } }),
-            h('button', {
-              type: 'button',
-              style: skill.invocation.modelInvocable ? toggleOnStyle : toggleOffStyle,
-              onClick: () => toggle(skill.name, 'modelInvocable'),
-              title: t('modelInvoke'),
-            }, `${t('modelInvoke')}: ${skill.invocation.modelInvocable ? t('enabled') : t('disabled')}`),
-            h('button', {
-              type: 'button',
-              style: skill.invocation.userInvocable ? toggleOnStyle : toggleOffStyle,
-              onClick: () => toggle(skill.name, 'userInvocable'),
-              title: t('userInvoke'),
-            }, `${t('userInvoke')}: ${skill.invocation.userInvocable ? t('enabled') : t('disabled')}`),
-            h('button', { type: 'button', style: btnStyle, onClick: () => openDetail(skill.name) }, t('viewDetail')),
-            h('button', { type: 'button', style: btnStyle, onClick: () => review(skill) }, t('reviewSkill')),
-          ),
-          h('div', { style: descStyle }, skill.description),
-          h('div', { style: metaStyle }, skill.whenToUse !== undefined ? `${t('whenToUse')}: ${skill.whenToUse}` : ''),
-          detail !== null && detail.name === skill.name && h('div', { style: contentStyle },
-            detail.path !== undefined && h('div', { style: metaStyle }, `${t('path')}: ${detail.path}`),
-            h('div', { style: { fontWeight: 600, margin: '6px 0 3px' } }, `${t('contentPreview')} (${detail.content.length} chars)`),
-            detail.content,
-          ),
-        )),
-      )),
+      view === 'all' && all.map(renderSkill),
+      view === 'source' && orderedSources.map((source) => renderGroup(sourceLabel(source), bySource.get(source)!)),
+      view === 'group' && orderedGroups.map((group) => renderGroup(group === '' ? t('noGroup') : group, byGroup.get(group)!)),
     ),
   )
 }

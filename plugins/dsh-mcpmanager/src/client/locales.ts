@@ -26,6 +26,11 @@ export const zh = {
   cancel: '取消',
   save: '保存',
   reviewNote: '新增前让 DHS 审查配置：命令来源、参数、环境变量注入风险',
+  enabled: '已启用',
+  disabled: '已禁用',
+  enableServer: '启用',
+  disableServer: '禁用',
+  npxResolved: 'npx 已解析为内置 Node 直调（打包版稳定性）',
 }
 
 export const en = {
@@ -54,4 +59,9 @@ export const en = {
   cancel: 'Cancel',
   save: 'Save',
   reviewNote: 'Ask DHS to review before adding: command origin, args, env injection risks',
+  enabled: 'Enabled',
+  disabled: 'Disabled',
+  enableServer: 'Enable',
+  disableServer: 'Disable',
+  npxResolved: 'npx resolved to bundled Node direct invocation (packaged stability)',
 }

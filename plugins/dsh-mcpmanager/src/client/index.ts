@@ -151,9 +151,9 @@ function McpPanel({ t, ctx, onClose }: { t: Translate; ctx: DiscoveryClientConte
       body: JSON.stringify({ id: editing.id.trim(), config }),
     })
       .then((res) => res.json())
-      .then((body: { ok?: boolean; error?: string }) => {
+      .then((body: { ok?: boolean; error?: string; resolvedNpx?: boolean }) => {
         if (body.ok) {
-          setNotice(t('saved'))
+          setNotice(body.resolvedNpx === true ? t('npxResolved') : t('saved'))
           setEditing(null)
           load()
         } else {
@@ -169,6 +169,24 @@ function McpPanel({ t, ctx, onClose }: { t: Translate; ctx: DiscoveryClientConte
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ id: s.id }),
+    })
+      .then((res) => res.json())
+      .then((body: { ok?: boolean; error?: string }) => {
+        if (body.ok) {
+          setNotice(t('saved'))
+          load()
+        } else {
+          setError(body.error ?? t('saveFail'))
+        }
+      })
+      .catch(() => setError(t('saveFail')))
+  }
+
+  const toggleEnabled = (s: McpServerEntry): void => {
+    fetch('/dsh-mcpmanager/toggle', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: s.id, enabled: !s.enabled }),
     })
       .then((res) => res.json())
       .then((body: { ok?: boolean; error?: string }) => {
@@ -234,14 +252,18 @@ function McpPanel({ t, ctx, onClose }: { t: Translate; ctx: DiscoveryClientConte
       ),
       servers !== null && servers.map((s) => h('div', { key: s.id, style: itemStyle },
         h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
-          h('span', { style: { fontSize: 13, fontWeight: 600, color: '#1f2328', fontFamily: 'monospace' } }, s.serverName),
+          h('span', { style: { fontSize: 13, fontWeight: 600, color: '#1f2328', fontFamily: 'monospace', opacity: s.enabled ? 1 : 0.45 } }, s.serverName),
           h('span', { style: { fontSize: 10, padding: '1px 7px', borderRadius: 9, background: s.transport === 'stdio' ? '#eef2ff' : '#fef3c7', color: s.transport === 'stdio' ? '#4f46e5' : '#b45309' } }, s.transport),
+          h('span', { style: { fontSize: 10, padding: '1px 7px', borderRadius: 9, background: s.enabled ? '#e8f7ee' : '#f6f7f9', color: s.enabled ? '#1a7f37' : '#8b949e' } },
+            s.enabled ? t('enabled') : t('disabled')),
           h('span', { style: { flex: 1 } }),
+          h('button', { type: 'button', style: s.enabled ? btnStyle : { ...btnStyle, background: '#4176e6', borderColor: '#4176e6', color: '#fff' }, onClick: () => toggleEnabled(s) },
+            s.enabled ? t('disableServer') : t('enableServer')),
           h('button', { type: 'button', style: btnStyle, onClick: () => startEdit(s) }, t('edit')),
           h('button', { type: 'button', style: dangerBtn, onClick: () => remove(s) }, t('delete')),
         ),
         h('div', { style: metaStyle }, `id: ${s.id}`),
-        (s.command !== undefined || (s.args ?? []).length > 0) && h('div', { style: { fontSize: 11, color: '#57606a', marginTop: 3, fontFamily: 'monospace' } },
+        (s.command !== undefined || (s.args ?? []).length > 0) && h('div', { style: { fontSize: 11, color: '#57606a', marginTop: 3, fontFamily: 'monospace', opacity: s.enabled ? 1 : 0.5 } },
           [s.command, ...(s.args ?? [])].filter(Boolean).join(' '),
         ),
         s.env !== undefined && h('div', { style: metaStyle }, `env: ${Object.keys(s.env).join(', ')}`),

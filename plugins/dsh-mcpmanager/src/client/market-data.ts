@@ -8,4 +8,5 @@ export interface McpServerEntry {
   args?: string[]
   env?: Record<string, string>
   cwd?: string
+  enabled: boolean
 }

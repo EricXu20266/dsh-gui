@@ -22,6 +22,17 @@ export const zh = {
   createSkillNote: '让 DHS 在你的技能目录创建一个新技能',
   toggleOk: '已更新，列表已刷新',
   toggleFail: '切换失败',
+  viewAll: '全部',
+  viewSource: '按来源',
+  viewGroup: '按合集',
+  noGroup: '未分组',
+  setGroup: '合集',
+  setGroupNote: '把技能归入合集（group/subgroup），便于分组查看与批量管理',
+  groupNamePh: '合集名（如：内容创作）',
+  subgroupNamePh: '子合集（可选）',
+  groupBatch: '合集操作',
+  enableAll: '全部启用',
+  disableAll: '全部禁用',
 }
 
 export const en = {
@@ -46,4 +57,15 @@ export const en = {
   createSkillNote: 'Ask DHS to create a new skill in your skill directory',
   toggleOk: 'Updated, list refreshed',
   toggleFail: 'Toggle failed',
+  viewAll: 'All',
+  viewSource: 'By source',
+  viewGroup: 'By collection',
+  noGroup: 'Ungrouped',
+  setGroup: 'Collection',
+  setGroupNote: 'Assign the skill to a collection (group/subgroup) for grouped viewing and batch management',
+  groupNamePh: 'Collection name (e.g. content creation)',
+  subgroupNamePh: 'Sub-collection (optional)',
+  groupBatch: 'Collection actions',
+  enableAll: 'Enable all',
+  disableAll: 'Disable all',
 }
