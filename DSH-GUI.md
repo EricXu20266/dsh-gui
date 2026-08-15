@@ -62,6 +62,25 @@ dsh-gui/
 
 ---
 
+## 内核依赖：deepseek-harness（DHS 原始仓库）
+
+本项目是纯 GUI 壳——不含任何 DHS 业务逻辑，全部依赖本地 deepseek-harness 仓库（DHS 原生代码的完整 clone）。
+
+| 字段 | 值 |
+|------|-----|
+| 本地路径 | `../deepseek-harness`（`E:\AllinDeepSeek\deepseek-harness`） |
+| 性质 | 官方 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) 的本地 clone，含完整 DHS 原生代码 |
+| 远程仓库 | `https://github.com/deepseek-ai/deepseek-harness.git`（官方上游） |
+| 分支 | `master` |
+| 接入方式 | pnpm workspace 成员（`packages` 含 `../deepseek-harness` 及其子包），`@deepseek-ai/*` 直接引用 |
+| 升级方式 | `git -C ../deepseek-harness pull` → `pnpm install` → `pnpm --filter @deepseek-ai/dsh-root run build` |
+
+**红线（不可协商）**：
+- 不修改 `../deepseek-harness` 下任何文件——内核保持官方原样
+- DHS 升级只走官方上游 pull，本地不 fork 不定制
+
+---
+
 ## 环境分层
 
 | 环境 | 用途 | 运行位置 | 配置 |
@@ -151,3 +170,4 @@ main（稳定） ←── feature/*（开发，--no-ff 合并）
 |------|----------|------|
 | 2026-08-15 | 初始创建（P0 完成：webui→gui + 对话链路全通） | POC 验收通过 |
 | 2026-08-15 | 自研 dsh-discovery 插件搜索器（浏览/搜索/已安装标识/检查更新/中英搜索） | 替代第三方 dshmarket |
+| 2026-08-15 | 宪法补充「内核依赖：deepseek-harness（原始仓库）」说明（本地路径/官方远程/master 分支/升级方式） | 明确内核仓库关系与升级路径 |
