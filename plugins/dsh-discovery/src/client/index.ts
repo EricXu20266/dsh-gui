@@ -176,8 +176,8 @@ const cardBtnStyle: React.CSSProperties = {
   transition: 'border-color .15s ease, background-color .15s ease, color .15s ease',
 }
 const cardBtnPrimaryStyle: React.CSSProperties = {
-  ...cardBtnStyle, border: 'none',
-  color: 'var(--dsw-alias-brand-primary, #7aa2ff)',
+  ...cardBtnStyle,
+  color: 'var(--dsw-static-deepseek-500, #4176E6)',
 }
 /** Hover micro-interaction for card / scenario / header buttons (CSS class). */
 const HOVER_CSS = '.dshd-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.08)) !important;border-color:var(--dsw-alias-brand-primary,#7aa2ff) !important}'
