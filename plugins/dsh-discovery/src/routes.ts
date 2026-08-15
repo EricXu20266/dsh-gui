@@ -151,13 +151,15 @@ async function fetchReadme(owner: string, repo: string): Promise<string> {
  * @param host - Acquired webServer service.
  * @returns Disposer removing every registered route.
  */
-export function mountDiscoveryRoutes(host: DiscoveryHost): () => void {
+export function mountDiscoveryRoutes(host: DiscoveryHost, listInstalled: () => string[]): () => void {
   const disposers = [
     host.webServer.register({
       kind: 'exact',
       path: '/dsh-discovery/listing',
-      handler: async (_request, response) => {
+      handler: async (request, response) => {
         try {
+          const url = new URL(request.url ?? '', 'http://localhost')
+          if (url.searchParams.get('force') === '1') invalidateListing()
           const listing = await fetchListing()
           sendJson(response, 200, listing)
         } catch (error) {
@@ -165,6 +167,13 @@ export function mountDiscoveryRoutes(host: DiscoveryHost): () => void {
             error: error instanceof Error ? error.message : String(error),
           })
         }
+      },
+    }),
+    host.webServer.register({
+      kind: 'exact',
+      path: '/dsh-discovery/installed',
+      handler: async (_request, response) => {
+        sendJson(response, 200, { installed: listInstalled() })
       },
     }),
     host.webServer.register({

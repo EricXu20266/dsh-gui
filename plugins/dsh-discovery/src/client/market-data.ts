@@ -29,6 +29,49 @@ const CATEGORY_KEYWORDS: Array<{ id: string; label: string; match: RegExp }> = [
   { id: 'dev', label: '开发与运行时', match: /dev|runtime|debug|inspect|code|git|docker|sandbox/i },
 ]
 
+/**
+ * 中英同义词表：中文搜索词 → 英文关键词数组。插件数据是英文的
+ * （name/description/topics），用户搜中文词时用英文关键词去匹配，
+ * 避免中文搜索漏掉英文内容。覆盖常见插件技术词，按需扩充。
+ */
+const SEARCH_SYNONYMS: Record<string, string[]> = {
+  记忆: ['memory', 'recall', 'remember', 'store', 'kv', 'vector'],
+  终端: ['terminal', 'tui', 'console', 'shell', 'bash'],
+  通知: ['notify', 'notification', 'webhook', 'slack', 'wechat', 'feishu', 'telegram', 'dingtalk', 'push'],
+  聊天: ['chat', 'conversation', 'message', 'dialog', 'discuss'],
+  对话: ['chat', 'conversation', 'message', 'dialog'],
+  界面: ['ui', 'interface', 'panel', 'overlay', 'web-ui'],
+  皮肤: ['theme', 'skin', 'appearance'],
+  主题: ['theme', 'skin'],
+  工具: ['tool', 'utility', 'command', 'automation'],
+  模型: ['model', 'llm', 'provider', 'inference', 'gateway'],
+  插件: ['plugin', 'extension', 'addon', 'module'],
+  搜索: ['search', 'discovery', 'find', 'query'],
+  开发: ['dev', 'runtime', 'debug', 'inspect', 'code', 'git', 'docker', 'sandbox'],
+  测试: ['test', 'testing', 'spec', 'verify'],
+  文档: ['doc', 'documentation', 'docs', 'wiki'],
+  数据库: ['database', 'db', 'sql', 'kv', 'storage', 'postgres', 'mysql', 'sqlite'],
+  缓存: ['cache', 'redis', 'memcached'],
+  队列: ['queue', 'mq', 'kafka', 'rabbitmq'],
+  网络: ['network', 'http', 'request', 'fetch', 'socket', 'websocket', 'proxy'],
+  安全: ['security', 'auth', 'login', 'password', 'token', 'permission', 'sandbox'],
+  文件: ['file', 'fs', 'filesystem', 'path', 'folder', 'directory'],
+  图片: ['image', 'photo', 'picture', 'vision'],
+  视频: ['video', 'media', 'stream'],
+  音频: ['audio', 'sound', 'voice', 'speech', 'tts', 'asr'],
+  语音: ['voice', 'speech', 'tts', 'asr', 'audio'],
+  代码: ['code', 'source', 'snippet', 'syntax', 'highlight'],
+  工作流: ['workflow', 'pipeline', 'automation', 'orchestration'],
+  调度: ['schedule', 'cron', 'timer', 'task', 'job'],
+  代理: ['proxy', 'agent', 'provider'],
+  分析: ['analytics', 'analysis', 'metrics', 'stats', 'dashboard'],
+  监控: ['monitor', 'watch', 'alert', 'metric', 'observability'],
+  日志: ['log', 'logging', 'trace', 'logger'],
+  浏览器: ['browser', 'chromium', 'playwright', 'puppeteer', 'web'],
+  网页: ['web', 'html', 'http', 'page', 'browser'],
+  集成: ['integration', 'api', 'webhook', 'connect'],
+}
+
 export function categoryOf(plugin: PluginEntry): string {
   const haystack = `${plugin.name} ${plugin.topics.join(' ')} ${plugin.description}`.slice(0, 400)
   for (const cat of CATEGORY_KEYWORDS) {
@@ -56,14 +99,21 @@ export function filterPlugins(
   const all = listing?.plugins ?? []
   const q = opts.q.trim()
   const qLower = q.toLowerCase()
-  // 搜索词命中分类 label 时，复用该分类的英文关键词，避免中文搜索漏掉英文内容
+  // 搜索词命中分类 label 时，按分类归属匹配（和分类 Tab 一致）
   const labelCat = q === '' ? undefined : CATEGORY_KEYWORDS.find((c) => c.label === q)
+  // 搜索词命中中英同义词表时，用英文关键词匹配
+  const synonyms = q === '' ? undefined : SEARCH_SYNONYMS[q]
   return all.filter((p) => {
     if (opts.cat !== 'all' && categoryOf(p) !== opts.cat) return false
     if (q === '') return true
     if (labelCat) return categoryOf(p) === labelCat.id
     const hay = `${p.name} ${p.owner} ${p.description} ${p.topics.join(' ')}`.toLowerCase()
-    return hay.includes(qLower)
+    if (hay.includes(qLower)) return true
+    if (synonyms !== undefined) {
+      const catHay = `${p.name} ${p.topics.join(' ')} ${p.description}`.toLowerCase()
+      return synonyms.some((en) => catHay.includes(en))
+    }
+    return false
   }).sort((a, b) => b.stars - a.stars)
 }
 

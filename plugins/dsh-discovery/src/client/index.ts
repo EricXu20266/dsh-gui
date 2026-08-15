@@ -17,6 +17,10 @@ export const name = 'dsh-discovery'
 // Locale + slots + session orchestration injected before apply runs.
 export const inject = ['slots', 'locale', 'sessions', 'workspaces']
 
+/** Listing 模块级缓存：TTL 过期（定时）或 app 重启（模块变量清空）自然重置。 */
+const LISTING_TTL_MS = 10 * 60 * 1000
+let listingCache: { at: number; data: PluginListing | null } = { at: 0, data: null }
+
 export interface LocaleService {
   register(namespace: string, dicts: { zh: Record<string, string>; en: Record<string, string> }): unknown
   bind(namespace: string): Translate
@@ -161,6 +165,9 @@ const badgeThirdStyle: React.CSSProperties = {
   color: 'var(--dsw-alias-label-tertiary, #7c7c9c)', padding: '1px 7px', borderRadius: 999, lineHeight: '16px',
   border: '1px solid currentColor', flexShrink: 0,
 }
+const installedBadgeStyle: React.CSSProperties = {
+  marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', flexShrink: 0,
+}
 const cardFooterStyle: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 8, marginTop: 'auto',
 }
@@ -231,11 +238,34 @@ function StarIcon() {
   )
 }
 
-function PluginCard({ plugin, t, onReview, onViewRepo }: {
+/** 已安装对勾图标（平面 SVG：浅蓝圆底 + 蓝色对勾）。 */
+function InstalledIcon() {
+  return h('svg', { width: 13, height: 13, viewBox: '0 0 14 14', fill: 'none', xmlns: 'http://www.w3.org/2000/svg', style: { flexShrink: 0 } },
+    h('circle', { cx: 7, cy: 7, r: 6.2, fill: 'var(--dsw-static-deepseek-500, #4176E6)', opacity: 0.16 }),
+    h('path', { d: 'M4 7.2L6.2 9.4L10.2 5.2', stroke: 'var(--dsw-static-deepseek-500, #4176E6)', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+  )
+}
+
+/** 是否已安装：仓库名匹配已安装包名（忽略 npm scope 前缀与大小写）。 */
+function isInstalled(plugin: PluginEntry, installed: string[]): boolean {
+  const names = new Set(installed.map((n) => (n.split('/').pop() ?? n).toLowerCase()))
+  return names.has(plugin.name.toLowerCase())
+}
+
+/** ISO 时间 → 本地 HH:mm。 */
+function formatTime(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+function PluginCard({ plugin, t, installed, onReview, onViewRepo, onCheckUpdate }: {
   plugin: PluginEntry
   t: Translate
+  installed: boolean
   onReview: (plugin: PluginEntry) => void
   onViewRepo: (plugin: PluginEntry) => void
+  onCheckUpdate: (plugin: PluginEntry) => void
 }) {
   const official = isOfficial(plugin)
   return h('div', { style: cardStyle },
@@ -247,6 +277,7 @@ function PluginCard({ plugin, t, onReview, onViewRepo }: {
         h('div', { style: nameStyle }, plugin.name),
         h('div', { style: ownerStyle }, `${plugin.owner} / ${plugin.name}`),
       ),
+      installed && h('span', { style: installedBadgeStyle, title: t('installedTooltip') }, h(InstalledIcon)),
     ),
     h('p', { style: descStyle }, plugin.description || '—'),
     h('div', { style: metaStyle },
@@ -257,7 +288,9 @@ function PluginCard({ plugin, t, onReview, onViewRepo }: {
     h('div', { style: cardFooterStyle },
       h('span', { style: official ? badgeOfficialStyle : badgeThirdStyle }, official ? t('official') : t('thirdParty')),
       h('div', { style: cardBtnGroupStyle },
-        h('button', { type: 'button', className: 'dshd-btn', style: cardBtnPrimaryStyle, title: t('reviewInstall'), onClick: () => onReview(plugin) }, t('reviewInstall')),
+        installed
+          ? h('button', { type: 'button', className: 'dshd-btn', style: cardBtnPrimaryStyle, title: t('checkUpdate'), onClick: () => onCheckUpdate(plugin) }, t('checkUpdate'))
+          : h('button', { type: 'button', className: 'dshd-btn', style: cardBtnPrimaryStyle, title: t('reviewInstall'), onClick: () => onReview(plugin) }, t('reviewInstall')),
         h('button', { type: 'button', className: 'dshd-btn', style: cardBtnStyle, title: t('viewRepo'), onClick: () => onViewRepo(plugin) }, t('viewRepo')),
       ),
     ),
@@ -297,6 +330,17 @@ function buildReviewPrompt(plugin: PluginEntry, t: Translate): string {
     '审查通过后，使用 dsh plugin add 安装该插件。若发现风险，请列出风险点并停止安装。',
     '',
     t('networkNote'),
+  ].join('\n')
+}
+
+function buildCheckUpdatePrompt(plugin: PluginEntry): string {
+  return [
+    `请检查已安装插件 ${plugin.owner}/${plugin.name} 是否有可用更新：${plugin.htmlUrl}`,
+    '',
+    '请检查该插件的当前安装版本与最新版本（npm registry 或 GitHub releases）：',
+    '1. 对比已安装版本与最新版本',
+    '2. 如有更新，简述更新内容（changelog / releases）',
+    '3. 如适合更新，使用 dsh plugin update 更新；否则说明原因',
   ].join('\n')
 }
 
@@ -491,22 +535,44 @@ function ScenarioPanel({ listing, t, onInstall, onCustom }: {
   )
 }
 
-function DiscoveryBrowser({ t, ctx, onClose }: { t: Translate; ctx: DiscoveryClientContext; onClose: () => void }) {
+function DiscoveryBrowser({ t, ctx, onClose, onFetched }: {
+  t: Translate
+  ctx: DiscoveryClientContext
+  onClose: () => void
+  onFetched: (at: string) => void
+}) {
   const [tab, setTab] = useState<'browse' | 'scenario'>('browse')
   const [listing, setListing] = useState<PluginListing | null>(null)
   const [loadError, setLoadError] = useState(false)
+  const [installed, setInstalled] = useState<string[]>([])
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('all')
   const [preview, setPreview] = useState<PluginEntry | null>(null)
 
   const load = (): void => {
     setLoadError(false)
+    // 模块级缓存：TTL 内直接使用，避免每次打开面板都重新拉取 GitHub
+    if (listingCache.data !== null && Date.now() - listingCache.at < LISTING_TTL_MS) {
+      setListing(listingCache.data)
+      onFetched(listingCache.data.fetchedAt)
+      return
+    }
     fetch('/dsh-discovery/listing', { cache: 'no-store' })
       .then((res) => { if (!res.ok) throw new Error('HTTP ' + String(res.status)); return res.json() })
-      .then((body: PluginListing) => setListing(body))
+      .then((body: PluginListing) => {
+        listingCache = { at: Date.now(), data: body }
+        setListing(body)
+        onFetched(body.fetchedAt)
+      })
       .catch(() => setLoadError(true))
   }
   useEffect(load, [])
+  useEffect(() => {
+    fetch('/dsh-discovery/installed', { cache: 'no-store' })
+      .then((res) => { if (!res.ok) return []; return res.json() })
+      .then((body: { installed: string[] }) => setInstalled(body.installed ?? []))
+      .catch(() => setInstalled([]))
+  }, [])
 
   const cats = useMemo(() => orderedCategories(listing), [listing])
   const plugins = useMemo(() => filterPlugins(listing, { q, cat }), [listing, q, cat])
@@ -514,6 +580,10 @@ function DiscoveryBrowser({ t, ctx, onClose }: { t: Translate; ctx: DiscoveryCli
   const handleReview = (plugin: PluginEntry): void => {
     onClose()
     void openSessionAndSend(ctx, buildReviewPrompt(plugin, t))
+  }
+  const handleCheckUpdate = (plugin: PluginEntry): void => {
+    onClose()
+    void openSessionAndSend(ctx, buildCheckUpdatePrompt(plugin))
   }
   const handleInstall = (scenario: Scenario, matched: PluginEntry[]): void => {
     onClose()
@@ -553,7 +623,10 @@ function DiscoveryBrowser({ t, ctx, onClose }: { t: Translate; ctx: DiscoveryCli
         !loadError && listing === null && h('div', { style: loadingStyle }, t('loading')),
         !loadError && listing !== null && plugins.length === 0 && h('div', { style: emptyStyle }, t('empty')),
         !loadError && listing !== null && plugins.length > 0 && h('div', { style: gridStyle },
-          plugins.map((p) => h(PluginCard, { key: p.htmlUrl, plugin: p, t, onReview: handleReview, onViewRepo: (x) => setPreview(x) })),
+          plugins.map((p) => h(PluginCard, {
+            key: p.htmlUrl, plugin: p, t, installed: isInstalled(p, installed),
+            onReview: handleReview, onViewRepo: (x) => setPreview(x), onCheckUpdate: handleCheckUpdate,
+          })),
         ),
       ),
     ),
@@ -578,6 +651,7 @@ export function apply(ctx: DiscoveryClientContext): void {
 function DiscoveryTrigger({ wide, t, ctx }: { wide: boolean; t: Translate; ctx: DiscoveryClientContext }) {
   const [open, setOpen] = useState(false)
   const [hovered, setHovered] = useState(false)
+  const [fetchedAt, setFetchedAt] = useState('')
   const close = (): void => setOpen(false)
   const closeButton = useRef<HTMLButtonElement | null>(null)
 
@@ -611,9 +685,10 @@ function DiscoveryTrigger({ wide, t, ctx }: { wide: boolean; t: Translate; ctx: 
           h(PluginIcon, { size: 15 }),
           h('span', null, t('nav')),
           h('span', { style: { fontSize: 11, color: 'var(--dsw-alias-label-secondary, #7c7c9c)', fontWeight: 400 } }, t('subtitle')),
+          fetchedAt !== '' && h('span', { style: { fontSize: 11, color: 'var(--dsw-alias-label-tertiary, #9aa0b4)', fontWeight: 400 } }, `${t('lastRefresh')} ${formatTime(fetchedAt)}`),
           h('button', { ref: closeButton, style: closeStyle, onClick: close, 'aria-label': '关闭' }, '✕ 关闭'),
         ),
-        h('div', { style: { flex: 1, overflowY: 'hidden', padding: '0 4px' } }, h(DiscoveryBrowser, { t, ctx, onClose: close })),
+        h('div', { style: { flex: 1, overflowY: 'hidden', padding: '0 4px' } }, h(DiscoveryBrowser, { t, ctx, onClose: close, onFetched: setFetchedAt })),
       ),
     ),
   )

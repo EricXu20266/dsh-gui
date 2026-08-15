@@ -49,6 +49,9 @@ export const zh = {
   category_notify: '通知与集成',
   category_dev: '开发与运行时',
   category_other: '其他',
+  lastRefresh: '上次刷新',
+  installedTooltip: '该插件已安装',
+  checkUpdate: '检查更新',
 }
 
 export const en = {
@@ -100,4 +103,7 @@ export const en = {
   category_notify: 'Notifications & Integrations',
   category_dev: 'Dev & Runtime',
   category_other: 'Others',
+  lastRefresh: 'Last refreshed',
+  installedTooltip: 'This plugin is installed',
+  checkUpdate: 'Check updates',
 }
