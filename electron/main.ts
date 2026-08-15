@@ -11,7 +11,7 @@
  * 当前形态：main 进程 spawn 系统 node 跑 DHS bin.js（host 子进程），
  * 窗口 loadURL http://127.0.0.1:<port>。GUI 形态达成，host 隔离、可独立升级。
  */
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, shell } from 'electron'
 import { spawn, type ChildProcess } from 'node:child_process'
 import net from 'node:net'
 
@@ -74,6 +74,11 @@ app.whenReady().then(async () => {
         contextIsolation: true,
         nodeIntegration: false,
       },
+    })
+    // 外部链接（target=_blank / window.open）一律走系统默认浏览器，不在应用内开新窗口
+    win.webContents.setWindowOpenHandler(({ url }) => {
+      if (url.startsWith('http://') || url.startsWith('https://')) shell.openExternal(url)
+      return { action: 'deny' }
     })
     win.webContents.on('did-fail-load', (_e, code, desc, url) => {
       console.error(`[dhs-gui] load failed (${code}): ${desc} for ${url}`)

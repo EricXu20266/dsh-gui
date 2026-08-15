@@ -5,7 +5,7 @@
  * There is deliberately no install / update / uninstall surface here:
  * installation happens via `dsh plugin add` after the user reviews a repo.
  */
-import { createElement as h, useEffect, useMemo, useRef, useState } from 'react'
+import { createElement as h, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Translate } from './locales-types.ts'
 import { zh, en } from './locales.ts'
 import {
@@ -154,26 +154,33 @@ const emptyStyle: React.CSSProperties = { textAlign: 'center', color: 'var(--dsw
 
 const badgeOfficialStyle: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', fontSize: 10, fontWeight: 600,
-  color: 'var(--dsw-alias-brand-primary, #7aa2ff)', padding: '1px 7px', borderRadius: 999,
-  border: '1px solid currentColor', flexShrink: 0,
+  color: '#ffffff', padding: '2px 8px', borderRadius: 999, lineHeight: '16px',
+  background: 'var(--dsw-static-deepseek-500, #4176E6)', flexShrink: 0,
 }
 const badgeThirdStyle: React.CSSProperties = {
-  ...badgeOfficialStyle, color: 'var(--dsw-alias-label-tertiary, #7c7c9c)',
+  display: 'inline-flex', alignItems: 'center', fontSize: 10, fontWeight: 600,
+  color: 'var(--dsw-alias-label-tertiary, #7c7c9c)', padding: '1px 7px', borderRadius: 999, lineHeight: '16px',
+  border: '1px solid currentColor', flexShrink: 0,
 }
 const cardFooterStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 8, marginTop: 'auto', flexWrap: 'wrap',
+  display: 'flex', alignItems: 'center', gap: 8, marginTop: 'auto',
+}
+const cardBtnGroupStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto',
 }
 const cardBtnStyle: React.CSSProperties = {
   border: '1px solid var(--dsw-alias-border-l2, #3a3a5a)',
   background: 'var(--dsw-alias-button-elevated-fill, #2a2a4a)',
   color: 'var(--dsw-alias-label-primary, #e0e0f0)', borderRadius: 6,
   padding: '4px 10px', cursor: 'pointer', fontSize: 11,
-  transition: 'border-color .15s ease, background-color .15s ease',
+  transition: 'border-color .15s ease, background-color .15s ease, color .15s ease',
 }
 const cardBtnPrimaryStyle: React.CSSProperties = {
   ...cardBtnStyle, borderColor: 'var(--dsw-alias-brand-primary, #7aa2ff)',
   color: 'var(--dsw-alias-brand-primary, #7aa2ff)',
 }
+/** Hover micro-interaction for card / scenario / header buttons (CSS class). */
+const HOVER_CSS = '.dshd-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.08)) !important;border-color:var(--dsw-alias-brand-primary,#7aa2ff) !important}'
 const tabRowStyle: React.CSSProperties = {
   display: 'flex', gap: 4, marginBottom: 12, borderBottom: '1px solid var(--dsw-alias-border-l2, #2e2e4a)',
 }
@@ -200,10 +207,23 @@ const repoPanelStyle: React.CSSProperties = {
   borderRadius: 16, boxShadow: '0 24px 64px rgba(0,0,0,.5)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
   zIndex: 1100,
 }
-const readmeStyle: React.CSSProperties = {
-  flex: 1, overflowY: 'auto', padding: '16px 20px', font: '12px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace',
-  color: 'var(--dsw-alias-label-primary, #e0e0f0)', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+const mdBodyStyle: React.CSSProperties = {
+  flex: 1, overflowY: 'auto', padding: '16px 20px', font: '13px/1.7 system-ui',
+  color: 'var(--dsw-alias-label-secondary, #c6c8d4)',
 }
+const mdH1Style: React.CSSProperties = { fontSize: 22, fontWeight: 700, margin: '20px 0 10px', color: 'var(--dsw-alias-label-primary, #e0e0f0)', borderBottom: '1px solid var(--dsw-alias-border-l2, #2e2e4a)', paddingBottom: 8 }
+const mdH2Style: React.CSSProperties = { fontSize: 18, fontWeight: 600, margin: '18px 0 8px', color: 'var(--dsw-alias-label-primary, #e0e0f0)' }
+const mdH3Style: React.CSSProperties = { fontSize: 15, fontWeight: 600, margin: '14px 0 6px', color: 'var(--dsw-alias-label-primary, #e0e0f0)' }
+const mdParaStyle: React.CSSProperties = { fontSize: 13, lineHeight: '22px', margin: '8px 0' }
+const mdCodeBlockStyle: React.CSSProperties = {
+  background: 'var(--dsw-alias-bg-layer-2, #1c1c2e)', border: '1px solid var(--dsw-alias-border-l2, #2e2e4a)',
+  borderRadius: 8, padding: '12px 14px', margin: '10px 0', overflowX: 'auto',
+  font: '12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace', color: 'var(--dsw-alias-label-primary, #e0e0f0)', whiteSpace: 'pre',
+}
+const mdInlineCodeStyle: React.CSSProperties = { background: 'var(--dsw-alias-bg-layer-2, #1c1c2e)', borderRadius: 4, padding: '1px 5px', font: '12px ui-monospace, Menlo, monospace', color: 'var(--dsw-alias-brand-primary, #7aa2ff)' }
+const mdListItemStyle: React.CSSProperties = { fontSize: 13, lineHeight: '22px', margin: '3px 0', paddingLeft: 4 }
+const mdQuoteStyle: React.CSSProperties = { borderLeft: '3px solid var(--dsw-alias-brand-primary, #7aa2ff)', padding: '4px 12px', margin: '10px 0', color: 'var(--dsw-alias-label-tertiary, #9aa0b4)' }
+const mdLinkStyle: React.CSSProperties = { color: 'var(--dsw-alias-brand-primary, #7aa2ff)', textDecoration: 'none' }
 
 function StarIcon() {
   return h('svg', { width: 11, height: 11, viewBox: '0 0 14 14', fill: 'currentColor', style: { flexShrink: 0 } },
@@ -236,8 +256,10 @@ function PluginCard({ plugin, t, onReview, onViewRepo }: {
     ),
     h('div', { style: cardFooterStyle },
       h('span', { style: official ? badgeOfficialStyle : badgeThirdStyle }, official ? t('official') : t('thirdParty')),
-      h('button', { type: 'button', style: cardBtnPrimaryStyle, onClick: () => onReview(plugin) }, t('reviewInstall')),
-      h('button', { type: 'button', style: cardBtnStyle, onClick: () => onViewRepo(plugin) }, t('viewRepo')),
+      h('div', { style: cardBtnGroupStyle },
+        h('button', { type: 'button', className: 'dshd-btn', style: cardBtnPrimaryStyle, title: t('reviewInstall'), onClick: () => onReview(plugin) }, t('reviewInstall')),
+        h('button', { type: 'button', className: 'dshd-btn', style: cardBtnStyle, title: t('viewRepo'), onClick: () => onViewRepo(plugin) }, t('viewRepo')),
+      ),
     ),
   )
 }
@@ -263,7 +285,7 @@ async function openSessionAndSend(ctx: DiscoveryClientContext, text: string): Pr
   return true
 }
 
-function buildReviewPrompt(plugin: PluginEntry): string {
+function buildReviewPrompt(plugin: PluginEntry, t: Translate): string {
   return [
     `请审查并安装插件仓库：${plugin.htmlUrl}（${plugin.owner}/${plugin.name}）`,
     '',
@@ -273,6 +295,8 @@ function buildReviewPrompt(plugin: PluginEntry): string {
     '3. 许可证与依赖安全',
     '',
     '审查通过后，使用 dsh plugin add 安装该插件。若发现风险，请列出风险点并停止安装。',
+    '',
+    t('networkNote'),
   ].join('\n')
 }
 
@@ -295,6 +319,8 @@ function buildScenarioBatchPrompt(scenario: Scenario, plugins: PluginEntry[], t:
     '2. 安装前先审查每个候选仓库的安全性',
     '3. 使用 dsh plugin add 安装筛选后的插件',
     '4. 完成后简述安装了哪些、为什么选它们',
+    '',
+    t('networkNote'),
   ].join('\n')
 }
 
@@ -311,7 +337,101 @@ function buildScenarioCustomPrompt(scenario: Scenario, plugins: PluginEntry[], t
     '1. 推荐安装哪些插件、各自理由',
     '2. 不推荐哪些、原因（功能重复 / 质量 / 安全）',
     '3. 等我确认后再安装',
+    '',
+    t('networkNote'),
   ].join('\n')
+}
+
+/* ── lightweight markdown renderer (zero-dependency) ─────────────────────── */
+
+function renderInline(text: string): ReactNode[] {
+  const nodes: ReactNode[] = []
+  const regex = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g
+  let last = 0
+  let key = 0
+  let match: RegExpExecArray | null
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > last) nodes.push(text.slice(last, match.index))
+    const token = match[0]
+    if (token.startsWith('`')) {
+      nodes.push(h('code', { key: key++, style: mdInlineCodeStyle }, token.slice(1, -1)))
+    } else if (token.startsWith('**')) {
+      nodes.push(h('strong', { key: key++ }, token.slice(2, -2)))
+    } else if (token.startsWith('*')) {
+      nodes.push(h('em', { key: key++ }, token.slice(1, -1)))
+    } else {
+      const link = token.match(/\[([^\]]+)\]\(([^)]+)\)/)
+      if (link) nodes.push(h('a', { key: key++, href: link[2], target: '_blank', rel: 'noreferrer', style: mdLinkStyle }, link[1]))
+    }
+    last = match.index + token.length
+  }
+  if (last < text.length) nodes.push(text.slice(last))
+  return nodes
+}
+
+function renderMarkdown(md: string): ReactNode[] {
+  const lines = md.split('\n')
+  const nodes: ReactNode[] = []
+  let key = 0
+  let inCode = false
+  let codeLines: string[] = []
+  let i = 0
+
+  const flushCode = (): void => {
+    if (codeLines.length > 0) {
+      nodes.push(h('pre', { key: key++, style: mdCodeBlockStyle }, h('code', null, codeLines.join('\n'))))
+      codeLines = []
+    }
+  }
+
+  while (i < lines.length) {
+    const line = lines[i]
+    if (line.trimStart().startsWith('```')) {
+      if (inCode) { flushCode(); inCode = false } else { inCode = true }
+      i++
+      continue
+    }
+    if (inCode) { codeLines.push(line); i++; continue }
+    if (line.trim() === '') { i++; continue }
+
+    const hMatch = line.match(/^(#{1,6})\s+(.*)$/)
+    if (hMatch) {
+      const level = hMatch[1].length
+      const style = level <= 1 ? mdH1Style : level === 2 ? mdH2Style : mdH3Style
+      const tag = level <= 1 ? 'h1' : level === 2 ? 'h2' : 'h3'
+      nodes.push(h(tag, { key: key++, style }, renderInline(hMatch[2])))
+      i++
+      continue
+    }
+
+    const ulMatch = line.match(/^\s*[-*+]\s+(.*)$/)
+    if (ulMatch) {
+      nodes.push(h('div', { key: key++, style: mdListItemStyle },
+        h('span', { style: { color: 'var(--dsw-alias-brand-primary, #7aa2ff)' } }, '• '), renderInline(ulMatch[1])))
+      i++
+      continue
+    }
+
+    const olMatch = line.match(/^\s*(\d+)\.\s+(.*)$/)
+    if (olMatch) {
+      nodes.push(h('div', { key: key++, style: mdListItemStyle },
+        h('span', { style: { color: 'var(--dsw-alias-label-secondary, #7c7c9c)' } }, `${olMatch[1]}. `), renderInline(olMatch[2])))
+      i++
+      continue
+    }
+
+    const quoteMatch = line.match(/^\s*>\s?(.*)$/)
+    if (quoteMatch) {
+      nodes.push(h('blockquote', { key: key++, style: mdQuoteStyle }, renderInline(quoteMatch[1])))
+      i++
+      continue
+    }
+
+    nodes.push(h('p', { key: key++, style: mdParaStyle }, renderInline(line)))
+    i++
+  }
+  if (inCode) flushCode()
+  return nodes
 }
 
 function RepoPreview({ plugin, t, onClose }: { plugin: PluginEntry; t: Translate; onClose: () => void }) {
@@ -332,13 +452,13 @@ function RepoPreview({ plugin, t, onClose }: { plugin: PluginEntry; t: Translate
     h('div', { style: repoPanelStyle, onClick: (e: React.MouseEvent) => e.stopPropagation() },
       h('div', { style: headerStyle },
         h(PluginIcon, { size: 15 }),
-        h('span', null, `${plugin.owner}/${plugin.name}`),
-        h('a', { href: plugin.htmlUrl, target: '_blank', rel: 'noreferrer', style: repoBtnStyle }, t('openOnGitHub')),
-        h('button', { style: closeStyle, onClick: onClose, 'aria-label': '关闭' }, '✕'),
+        h('span', { style: { flex: 1 } }, `${plugin.owner}/${plugin.name}`),
+        h('a', { href: plugin.htmlUrl, target: '_blank', rel: 'noreferrer', className: 'dshd-btn', style: repoBtnStyle, title: t('openOnGitHub') }, t('openOnGitHub')),
+        h('button', { className: 'dshd-btn', style: closeStyle, onClick: onClose, 'aria-label': '关闭', title: '关闭' }, '✕'),
       ),
       state === 'loading' && h('div', { style: loadingStyle }, t('readmeLoading')),
       state === 'error' && h('div', { style: emptyStyle }, t('readmeFail')),
-      state === 'done' && (readme === '' ? h('div', { style: emptyStyle }, t('noReadme')) : h('pre', { style: readmeStyle }, readme)),
+      state === 'done' && (readme === '' ? h('div', { style: emptyStyle }, t('noReadme')) : h('div', { style: mdBodyStyle }, renderMarkdown(readme))),
     ),
   )
 }
@@ -361,8 +481,8 @@ function ScenarioPanel({ listing, t, onInstall, onCustom }: {
             h('div', { style: scenarioDescStyle }, t(`scenario_${scenario.id}_desc`)),
             h('div', { style: scenarioCountStyle }, t('scenarioMatchCount').replace('{n}', String(matched.length))),
             h('div', { style: scenarioBtnRowStyle },
-              h('button', { type: 'button', style: cardBtnPrimaryStyle, onClick: () => onInstall(scenario, matched) }, t('installAll')),
-              h('button', { type: 'button', style: cardBtnStyle, onClick: () => onCustom(scenario, matched) }, t('customInstall')),
+              h('button', { type: 'button', className: 'dshd-btn', style: cardBtnPrimaryStyle, title: t('installAll'), onClick: () => onInstall(scenario, matched) }, t('installAll')),
+              h('button', { type: 'button', className: 'dshd-btn', style: cardBtnStyle, title: t('customInstall'), onClick: () => onCustom(scenario, matched) }, t('customInstall')),
             ),
           )
         }),
@@ -393,7 +513,7 @@ function DiscoveryBrowser({ t, ctx, onClose }: { t: Translate; ctx: DiscoveryCli
 
   const handleReview = (plugin: PluginEntry): void => {
     onClose()
-    void openSessionAndSend(ctx, buildReviewPrompt(plugin))
+    void openSessionAndSend(ctx, buildReviewPrompt(plugin, t))
   }
   const handleInstall = (scenario: Scenario, matched: PluginEntry[]): void => {
     onClose()
@@ -472,6 +592,7 @@ function DiscoveryTrigger({ wide, t, ctx }: { wide: boolean; t: Translate; ctx: 
   const style = wide ? { ...btnStyle, ...(hovered ? btnHoverStyle : null) } : railStyle
 
   return h('div', { style: { display: 'contents' } },
+    h('style', null, HOVER_CSS),
     h('button', {
       type: 'button',
       style,

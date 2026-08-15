@@ -40,6 +40,7 @@ export const zh = {
   scenario_automation_desc: '命令、任务调度、工作流编排',
   scenario_notify: '通知与集成',
   scenario_notify_desc: 'Webhook、IM、消息推送集成',
+  networkNote: '网络提示：国内访问 GitHub/npm 可能较慢或失败。安装时可用 npm 国内镜像加速——阿里源 registry.npmmirror.com 或清华源 mirrors.tuna.tsinghua.edu.cn。注意：国内源仅加速「安装」（包下载），不提供仓库 README 查看与源码审查能力，后者仍需访问 GitHub（必要时需代理）。',
 }
 
 export const en = {
@@ -82,4 +83,5 @@ export const en = {
   scenario_automation_desc: 'Commands, scheduling, orchestration',
   scenario_notify: 'Notifications & integrations',
   scenario_notify_desc: 'Webhooks, IM, message push',
+  networkNote: 'Network note: GitHub/npm may be slow or fail in some regions. For installation you can use npm mirrors — Alibaba registry.npmmirror.com or Tsinghua mirrors.tuna.tsinghua.edu.cn. These mirrors only accelerate package downloads; they cannot preview READMEs or source code, which still require GitHub access.',
 }
