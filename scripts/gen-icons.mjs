@@ -8,12 +8,14 @@
  */
 import sharp from 'sharp'
 import pngToIco from 'png-to-ico'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const ROOT = join(import.meta.dirname, '..')
 const SVG_SRC = 'E:/AllinDeepSeek/deepseek-harness/apps/web/public/favicon.svg'
 const OUT = join(ROOT, 'resources', 'icon')
+const TMP = mkdtempSync(join(tmpdir(), 'dsh-icons-')) // ico 中间 PNG 放系统临时目录，不污染 resources/
 
 // DeepSeek 品牌蓝（--dsw-static-deepseek-500）
 const DEEPSEEK_BLUE = '#4176E6'
@@ -27,7 +29,7 @@ const svgText = readFileSync(SVG_SRC, 'utf8')
 
 /** 渲染 SVG 到指定尺寸 PNG 并落盘，返回文件路径 */
 async function renderPng(size, name) {
-  const file = join(OUT, name)
+  const file = join(TMP, name)
   await sharp(Buffer.from(svgText), { density: 300 }).resize(size, size).png().toFile(file)
   return file
 }
