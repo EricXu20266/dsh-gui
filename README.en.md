@@ -22,7 +22,7 @@ Download, unzip, and run — double-click `dsh-gui.exe` to launch. The first lau
 ## System Requirements
 
 - **Windows 10+** (x64): portable build (win-unpacked) available — see Download above
-- **macOS** (Intel & Apple Silicon): built on Electron's cross-platform architecture, runs natively on macOS; macOS packaging/distribution is planned (`platform/macos` reserved)
+- **macOS** (Apple Silicon / arm64): supported, built by GitHub Actions CI (`build-mac-arm64`); artifacts available from Actions artifacts
 
 ## Features
 

@@ -22,7 +22,7 @@ DHS 官方以 web ui（浏览器）形态交付。dsh-gui 用 Electron 承载同
 ## 系统要求
 
 - **Windows 10+**（x64）：提供免安装包（win-unpacked），见上方下载
-- **macOS**（Intel & Apple Silicon）：应用基于 Electron 跨平台架构，可在 macOS 原生运行；macOS 打包分发适配规划中（`platform/macos` 预留）
+- **macOS**（Apple Silicon / arm64）：已支持，由 GitHub Actions CI（`build-mac-arm64`）构建，产物在 Actions artifacts 中获取
 
 ## 特性
 
