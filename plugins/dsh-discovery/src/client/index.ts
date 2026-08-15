@@ -97,7 +97,6 @@ const panelStyle: React.CSSProperties = {
 }
 const headerStyle: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px',
-  borderBottom: '1px solid var(--dsw-alias-border-l2, #2e2e4a)',
   color: 'var(--dsw-alias-label-primary, #e0e0f0)', font: '600 15px system-ui', flexShrink: 0,
 }
 const closeStyle: React.CSSProperties = {
@@ -182,7 +181,7 @@ const cardBtnPrimaryStyle: React.CSSProperties = {
 /** Hover micro-interaction for card / scenario / header buttons (CSS class). */
 const HOVER_CSS = '.dshd-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.08)) !important;border-color:var(--dsw-alias-brand-primary,#7aa2ff) !important}'
 const tabRowStyle: React.CSSProperties = {
-  display: 'flex', gap: 4, marginBottom: 12, borderBottom: '1px solid var(--dsw-alias-border-l2, #2e2e4a)',
+  display: 'flex', gap: 4, marginBottom: 12,
 }
 const tabStyle: React.CSSProperties = {
   border: 'none', background: 'transparent', color: 'var(--dsw-alias-label-secondary, #9aa0b4)',
