@@ -1,0 +1,499 @@
+/**
+ * dsh-discovery client: the sidebar entry (under New Session) opens a
+ * full-screen discovery browser. Read-only by design — listing comes from the
+ * host's read-only GitHub proxy, and opening a repo is a plain external link.
+ * There is deliberately no install / update / uninstall surface here:
+ * installation happens via `dsh plugin add` after the user reviews a repo.
+ */
+import { createElement as h, useEffect, useMemo, useRef, useState } from 'react'
+import type { Translate } from './locales-types.ts'
+import { zh, en } from './locales.ts'
+import {
+  filterPlugins, orderedCategories, isOfficial, SCENARIOS, scenarioPlugins,
+  type PluginEntry, type PluginListing, type Scenario,
+} from './market-data.ts'
+
+export const name = 'dsh-discovery'
+// Locale + slots + session orchestration injected before apply runs.
+export const inject = ['slots', 'locale', 'sessions', 'workspaces']
+
+export interface LocaleService {
+  register(namespace: string, dicts: { zh: Record<string, string>; en: Record<string, string> }): unknown
+  bind(namespace: string): Translate
+  subscribe(callback: () => void): () => void
+  getSnapshot(): { active: string }
+}
+
+export interface SlotsService {
+  inject(slot: string, register: () => unknown): void
+  register(meta: Record<string, unknown>, component: () => unknown): unknown
+}
+
+export interface SessionsService {
+  list: { getSnapshot(): { current?: string } }
+  open(id: string): void
+  scope(id: string): { get(name: string): unknown } | undefined
+}
+
+export interface WorkspacesService {
+  list: {
+    getSnapshot(): {
+      items: Array<{ sessionIds: string[]; workspaceId: string }>
+      recentWorkspaceId?: string
+    }
+  }
+  startSession(workspaceId?: string): void
+  connectWorkspace(workspaceId: string): Promise<string>
+}
+
+export interface DiscoveryClientContext {
+  effect(callback: () => unknown, label?: string): void
+  locale: LocaleService
+  slots: SlotsService
+  sessions: SessionsService
+  workspaces: WorkspacesService
+}
+
+/** DHS ui-primitives IconCordisPluginOutline14 path (linear plugin glyph). */
+const PLUGIN_ICON_PATH = 'M3.03426 5.66661L1.70084 7.00003L3.0315 8.33069L2.14762 9.21457L-0.0669245 7.00003L2.15038 4.78273L3.03426 5.66661ZM7 14.067L4.77924 11.8462L5.66313 10.9623L7 12.2992L8.33342 10.9658L9.2173 11.8496L7 14.067ZM11.8489 9.21803L10.965 8.33414L12.2992 7.00003L10.9623 5.66316L11.8462 4.77927L14.0669 7.00003L11.8489 9.21803ZM8.33066 3.03153L7 1.70087L5.66589 3.03498L4.782 2.1511L7 -0.0668945L9.21454 2.14765L8.33066 3.03153Z'
+
+function PluginIcon({ size = 14 }: { size?: number }) {
+  return h('svg', {
+    width: size, height: size, viewBox: '0 0 14 14', fill: 'none',
+    xmlns: 'http://www.w3.org/2000/svg', style: { flexShrink: 0 },
+  },
+    h('g', { clipPath: 'url(#dshd-plug-clip)' },
+      h('path', { d: PLUGIN_ICON_PATH, fill: 'currentColor' }),
+      h('rect', { x: 5.98535, y: 5.98535, width: 2.02942, height: 2.02942, fill: 'currentColor' }),
+    ),
+    h('defs', null, h('clipPath', { id: 'dshd-plug-clip' }, h('rect', { width: 14, height: 14, fill: 'currentColor' }))),
+  )
+}
+
+/* ── inline styles (consistent with the taishen-style panel look) ─────────── */
+
+const btnStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 6,
+  width: '100%', height: 38, padding: '8px 16px', boxSizing: 'border-box',
+  background: 'transparent', border: 'none', borderRadius: 12,
+  color: 'var(--dsw-alias-label-primary, #c6c8d4)', font: '500 14px system-ui',
+  lineHeight: '22px', cursor: 'pointer', textAlign: 'left', overflow: 'hidden',
+  transition: 'background-color .15s ease, color .15s ease, transform .15s ease',
+}
+const btnHoverStyle: React.CSSProperties = {
+  background: 'var(--dsw-alias-interactive-bg-hover, rgba(255,255,255,.06))',
+  color: 'var(--dsw-alias-label-primary, #e0e0f0)',
+}
+const railStyle: React.CSSProperties = {
+  ...btnStyle, justifyContent: 'center', width: 36, height: 36, padding: 0, borderRadius: 8,
+  color: 'var(--dsw-alias-label-secondary, #9aa0b4)',
+}
+const maskStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(8,8,16,.6)', zIndex: 1000 }
+const panelStyle: React.CSSProperties = {
+  position: 'absolute', inset: '28px 32px', maxWidth: 1180, margin: '0 auto',
+  background: 'var(--dsw-alias-bg-layer-1, #14141f)',
+  border: '1px solid var(--dsw-alias-border-l2, #2e2e4a)', borderRadius: 16,
+  boxShadow: '0 24px 64px rgba(0,0,0,.5)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+}
+const headerStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px',
+  borderBottom: '1px solid var(--dsw-alias-border-l2, #2e2e4a)',
+  color: 'var(--dsw-alias-label-primary, #e0e0f0)', font: '600 15px system-ui', flexShrink: 0,
+}
+const closeStyle: React.CSSProperties = {
+  marginLeft: 'auto', background: 'var(--dsw-alias-button-elevated-fill, #2a2a4a)',
+  color: 'var(--dsw-alias-label-primary, #e0e0f0)', border: '1px solid var(--dsw-alias-border-l2, #3a3a5a)',
+  borderRadius: 6, padding: '4px 12px', cursor: 'pointer', font: '12px system-ui',
+}
+const bodyStyle: React.CSSProperties = { flex: 1, overflowY: 'auto', padding: '16px 20px 24px' }
+const searchStyle: React.CSSProperties = {
+  width: '100%', padding: '8px 12px', borderRadius: 8, boxSizing: 'border-box',
+  border: '1px solid var(--dsw-alias-border-l2, #3a3a5a)',
+  background: 'var(--dsw-alias-bg-layer-2, #1c1c2e)', color: 'var(--dsw-alias-label-primary, #e0e0f0)',
+  font: '13px system-ui', outline: 'none', marginBottom: 12,
+}
+const catRowStyle: React.CSSProperties = { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }
+const catStyle: React.CSSProperties = {
+  border: 'none', background: 'transparent', color: 'var(--dsw-alias-label-secondary, #9aa0b4)',
+  fontSize: 12, padding: '4px 12px', borderRadius: 999, cursor: 'pointer',
+  transition: 'background-color .15s ease, color .15s ease',
+}
+const catOnStyle: React.CSSProperties = {
+  ...catStyle, background: 'var(--dsw-alias-bg-layer-2, #2a2a4a)',
+  color: 'var(--dsw-alias-brand-primary, #7aa2ff)', fontWeight: 600,
+}
+const gridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }
+const cardStyle: React.CSSProperties = {
+  background: 'var(--dsw-alias-bg-layer-1, #1a1a2b)',
+  border: '1px solid var(--dsw-alias-border-l2, #2e2e4a)', borderRadius: 12, padding: '14px 16px',
+  display: 'flex', flexDirection: 'column', gap: 8, transition: 'border-color .15s ease, transform .15s ease',
+}
+const nameStyle: React.CSSProperties = {
+  fontSize: 14, fontWeight: 600, color: 'var(--dsw-alias-label-primary, #e0e0f0)',
+  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+}
+const ownerStyle: React.CSSProperties = { fontSize: 11, color: 'var(--dsw-alias-label-secondary, #7c7c9c)' }
+const descStyle: React.CSSProperties = {
+  fontSize: 12, lineHeight: '18px', color: 'var(--dsw-alias-label-tertiary, #9aa0b4)',
+  minHeight: 36, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+}
+const metaStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--dsw-alias-label-secondary, #7c7c9c)', marginTop: 'auto' }
+const repoBtnStyle: React.CSSProperties = {
+  marginLeft: 'auto', border: '1px solid var(--dsw-alias-border-l2, #3a3a5a)',
+  background: 'var(--dsw-alias-button-elevated-fill, #2a2a4a)',
+  color: 'var(--dsw-alias-label-primary, #e0e0f0)', borderRadius: 6,
+  padding: '4px 10px', cursor: 'pointer', fontSize: 11, textDecoration: 'none',
+  transition: 'border-color .15s ease, background-color .15s ease',
+}
+const disclaimerStyle: React.CSSProperties = {
+  fontSize: 11, lineHeight: '16px', color: 'var(--dsw-alias-label-tertiary, #7c7c9c)',
+  background: 'var(--dsw-alias-bg-layer-2, #1c1c2e)', borderRadius: 8, padding: '8px 12px', margin: '0 0 12px',
+}
+const loadingStyle: React.CSSProperties = { textAlign: 'center', color: 'var(--dsw-alias-label-secondary, #9aa0b4)', fontSize: 13, padding: 48 }
+const emptyStyle: React.CSSProperties = { textAlign: 'center', color: 'var(--dsw-alias-label-secondary, #9aa0b4)', fontSize: 13, padding: 32 }
+
+const badgeOfficialStyle: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', fontSize: 10, fontWeight: 600,
+  color: 'var(--dsw-alias-brand-primary, #7aa2ff)', padding: '1px 7px', borderRadius: 999,
+  border: '1px solid currentColor', flexShrink: 0,
+}
+const badgeThirdStyle: React.CSSProperties = {
+  ...badgeOfficialStyle, color: 'var(--dsw-alias-label-tertiary, #7c7c9c)',
+}
+const cardFooterStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 8, marginTop: 'auto', flexWrap: 'wrap',
+}
+const cardBtnStyle: React.CSSProperties = {
+  border: '1px solid var(--dsw-alias-border-l2, #3a3a5a)',
+  background: 'var(--dsw-alias-button-elevated-fill, #2a2a4a)',
+  color: 'var(--dsw-alias-label-primary, #e0e0f0)', borderRadius: 6,
+  padding: '4px 10px', cursor: 'pointer', fontSize: 11,
+  transition: 'border-color .15s ease, background-color .15s ease',
+}
+const cardBtnPrimaryStyle: React.CSSProperties = {
+  ...cardBtnStyle, borderColor: 'var(--dsw-alias-brand-primary, #7aa2ff)',
+  color: 'var(--dsw-alias-brand-primary, #7aa2ff)',
+}
+const tabRowStyle: React.CSSProperties = {
+  display: 'flex', gap: 4, marginBottom: 12, borderBottom: '1px solid var(--dsw-alias-border-l2, #2e2e4a)',
+}
+const tabStyle: React.CSSProperties = {
+  border: 'none', background: 'transparent', color: 'var(--dsw-alias-label-secondary, #9aa0b4)',
+  fontSize: 13, padding: '8px 16px', cursor: 'pointer', borderBottom: '2px solid transparent',
+  transition: 'color .15s ease, border-color .15s ease',
+}
+const tabOnStyle: React.CSSProperties = {
+  ...tabStyle, color: 'var(--dsw-alias-brand-primary, #7aa2ff)',
+  borderBottomColor: 'var(--dsw-alias-brand-primary, #7aa2ff)', fontWeight: 600,
+}
+const scenarioCardStyle: React.CSSProperties = {
+  background: 'var(--dsw-alias-bg-layer-1, #1a1a2b)', border: '1px solid var(--dsw-alias-border-l2, #2e2e4a)',
+  borderRadius: 12, padding: '16px', display: 'flex', flexDirection: 'column', gap: 10,
+}
+const scenarioTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 600, color: 'var(--dsw-alias-label-primary, #e0e0f0)' }
+const scenarioDescStyle: React.CSSProperties = { fontSize: 12, lineHeight: '18px', color: 'var(--dsw-alias-label-tertiary, #9aa0b4)', minHeight: 18 }
+const scenarioCountStyle: React.CSSProperties = { fontSize: 11, color: 'var(--dsw-alias-label-secondary, #7c7c9c)' }
+const scenarioBtnRowStyle: React.CSSProperties = { display: 'flex', gap: 8, marginTop: 4 }
+const repoPanelStyle: React.CSSProperties = {
+  position: 'absolute', inset: '28px 32px', maxWidth: 900, margin: '0 auto',
+  background: 'var(--dsw-alias-bg-layer-1, #14141f)', border: '1px solid var(--dsw-alias-border-l2, #2e2e4a)',
+  borderRadius: 16, boxShadow: '0 24px 64px rgba(0,0,0,.5)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+  zIndex: 1100,
+}
+const readmeStyle: React.CSSProperties = {
+  flex: 1, overflowY: 'auto', padding: '16px 20px', font: '12px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace',
+  color: 'var(--dsw-alias-label-primary, #e0e0f0)', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+}
+
+function StarIcon() {
+  return h('svg', { width: 11, height: 11, viewBox: '0 0 14 14', fill: 'currentColor', style: { flexShrink: 0 } },
+    h('path', { d: 'M7 0.5L8.9 4.8L13.5 5.3L10.2 8.4L11 13L7 10.7L3 13L3.8 8.4L0.5 5.3L5.1 4.8L7 0.5Z' }),
+  )
+}
+
+function PluginCard({ plugin, t, onReview, onViewRepo }: {
+  plugin: PluginEntry
+  t: Translate
+  onReview: (plugin: PluginEntry) => void
+  onViewRepo: (plugin: PluginEntry) => void
+}) {
+  const official = isOfficial(plugin)
+  return h('div', { style: cardStyle },
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 } },
+      h('div', { style: { width: 30, height: 30, borderRadius: 8, background: 'var(--dsw-alias-bg-layer-2, #2a2a4a)', display: 'grid', placeItems: 'center', flexShrink: 0 } },
+        h(PluginIcon, { size: 14 }),
+      ),
+      h('div', { style: { minWidth: 0 } },
+        h('div', { style: nameStyle }, plugin.name),
+        h('div', { style: ownerStyle }, `${plugin.owner} / ${plugin.name}`),
+      ),
+    ),
+    h('p', { style: descStyle }, plugin.description || '—'),
+    h('div', { style: metaStyle },
+      h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 3 } }, h(StarIcon), plugin.stars),
+      plugin.language !== null && h('span', null, plugin.language),
+      plugin.updatedAt !== '' && h('span', null, t('updated') + ' ' + plugin.updatedAt.slice(0, 10)),
+    ),
+    h('div', { style: cardFooterStyle },
+      h('span', { style: official ? badgeOfficialStyle : badgeThirdStyle }, official ? t('official') : t('thirdParty')),
+      h('button', { type: 'button', style: cardBtnPrimaryStyle, onClick: () => onReview(plugin) }, t('reviewInstall')),
+      h('button', { type: 'button', style: cardBtnStyle, onClick: () => onViewRepo(plugin) }, t('viewRepo')),
+    ),
+  )
+}
+
+/** Resolve the target workspace, open a fresh session, and send one prompt into it. */
+async function openSessionAndSend(ctx: DiscoveryClientContext, text: string): Promise<boolean> {
+  const ws = ctx.workspaces.list.getSnapshot()
+  const current = ctx.sessions.list.getSnapshot().current
+  const currentWsId = current === undefined
+    ? undefined
+    : ws.items.find((item) => item.sessionIds.includes(current))?.workspaceId
+  const target = currentWsId ?? ws.recentWorkspaceId
+  if (target === undefined) {
+    ctx.workspaces.startSession()
+    return false
+  }
+  const sessionId = await ctx.workspaces.connectWorkspace(target)
+  ctx.sessions.open(sessionId)
+  const scoped = ctx.sessions.scope(sessionId)
+  if (scoped === undefined) return false
+  const conversation = scoped.get('conversation') as { send(text: string): Promise<void> }
+  await conversation.send(text)
+  return true
+}
+
+function buildReviewPrompt(plugin: PluginEntry): string {
+  return [
+    `请审查并安装插件仓库：${plugin.htmlUrl}（${plugin.owner}/${plugin.name}）`,
+    '',
+    '请先审查该仓库源码（README、package.json、入口代码、依赖），重点确认：',
+    '1. 无恶意行为（异常网络请求、文件读写、环境变量/密钥窃取、命令执行）',
+    '2. 与描述相符，无隐藏后门',
+    '3. 许可证与依赖安全',
+    '',
+    '审查通过后，使用 dsh plugin add 安装该插件。若发现风险，请列出风险点并停止安装。',
+  ].join('\n')
+}
+
+function scenarioLines(plugins: PluginEntry[]): string[] {
+  return plugins.slice(0, 20).map((p) =>
+    `- ${p.owner}/${p.name}（⭐${p.stars}，更新于 ${p.updatedAt.slice(0, 10)}）：${p.description || '—'}`)
+}
+
+function buildScenarioBatchPrompt(scenario: Scenario, plugins: PluginEntry[], t: Translate): string {
+  return [
+    `请为「${t(`scenario_${scenario.id}`)}」场景安装匹配插件。`,
+    '',
+    `场景需求：${t(`scenario_${scenario.id}_desc`)}`,
+    '',
+    '候选插件清单（已按 star 数排序）：',
+    ...scenarioLines(plugins),
+    '',
+    '请自主判断并安装：',
+    '1. 不要安装功能重复的插件（同类功能只选最优，以 star 数和更新时间为准）',
+    '2. 安装前先审查每个候选仓库的安全性',
+    '3. 使用 dsh plugin add 安装筛选后的插件',
+    '4. 完成后简述安装了哪些、为什么选它们',
+  ].join('\n')
+}
+
+function buildScenarioCustomPrompt(scenario: Scenario, plugins: PluginEntry[], t: Translate): string {
+  return [
+    `请为「${t(`scenario_${scenario.id}`)}」场景评估插件。`,
+    '',
+    `场景需求：${t(`scenario_${scenario.id}_desc`)}`,
+    '',
+    '候选插件清单（已按 star 数排序）：',
+    ...scenarioLines(plugins),
+    '',
+    '请评估后给出推荐列表和推荐理由（先不要安装）：',
+    '1. 推荐安装哪些插件、各自理由',
+    '2. 不推荐哪些、原因（功能重复 / 质量 / 安全）',
+    '3. 等我确认后再安装',
+  ].join('\n')
+}
+
+function RepoPreview({ plugin, t, onClose }: { plugin: PluginEntry; t: Translate; onClose: () => void }) {
+  const [state, setState] = useState<'loading' | 'error' | 'done'>('loading')
+  const [readme, setReadme] = useState('')
+
+  useEffect(() => {
+    setState('loading')
+    setReadme('')
+    const url = `/dsh-discovery/readme?owner=${encodeURIComponent(plugin.owner)}&repo=${encodeURIComponent(plugin.name)}`
+    fetch(url, { cache: 'no-store' })
+      .then((res) => { if (!res.ok) throw new Error('HTTP ' + String(res.status)); return res.json() })
+      .then((body: { markdown: string }) => { setReadme(body.markdown); setState('done') })
+      .catch(() => setState('error'))
+  }, [plugin.owner, plugin.name])
+
+  return h('div', { style: maskStyle, onClick: onClose },
+    h('div', { style: repoPanelStyle, onClick: (e: React.MouseEvent) => e.stopPropagation() },
+      h('div', { style: headerStyle },
+        h(PluginIcon, { size: 15 }),
+        h('span', null, `${plugin.owner}/${plugin.name}`),
+        h('a', { href: plugin.htmlUrl, target: '_blank', rel: 'noreferrer', style: repoBtnStyle }, t('openOnGitHub')),
+        h('button', { style: closeStyle, onClick: onClose, 'aria-label': '关闭' }, '✕'),
+      ),
+      state === 'loading' && h('div', { style: loadingStyle }, t('readmeLoading')),
+      state === 'error' && h('div', { style: emptyStyle }, t('readmeFail')),
+      state === 'done' && (readme === '' ? h('div', { style: emptyStyle }, t('noReadme')) : h('pre', { style: readmeStyle }, readme)),
+    ),
+  )
+}
+
+function ScenarioPanel({ listing, t, onInstall, onCustom }: {
+  listing: PluginListing | null
+  t: Translate
+  onInstall: (scenario: Scenario, plugins: PluginEntry[]) => void
+  onCustom: (scenario: Scenario, plugins: PluginEntry[]) => void
+}) {
+  return h('div', { style: { height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 } },
+    h('p', { style: disclaimerStyle }, `⚠️ ${t('disclaimerBody')}`),
+    h('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-label-primary, #e0e0f0)', margin: '0 0 12px' } }, t('scenariosTitle')),
+    h('div', { style: { ...bodyStyle, flex: 1 } },
+      h('div', { style: gridStyle },
+        SCENARIOS.map((scenario) => {
+          const matched = scenarioPlugins(listing, scenario)
+          return h('div', { key: scenario.id, style: scenarioCardStyle },
+            h('div', { style: scenarioTitleStyle }, t(`scenario_${scenario.id}`)),
+            h('div', { style: scenarioDescStyle }, t(`scenario_${scenario.id}_desc`)),
+            h('div', { style: scenarioCountStyle }, t('scenarioMatchCount').replace('{n}', String(matched.length))),
+            h('div', { style: scenarioBtnRowStyle },
+              h('button', { type: 'button', style: cardBtnPrimaryStyle, onClick: () => onInstall(scenario, matched) }, t('installAll')),
+              h('button', { type: 'button', style: cardBtnStyle, onClick: () => onCustom(scenario, matched) }, t('customInstall')),
+            ),
+          )
+        }),
+      ),
+    ),
+  )
+}
+
+function DiscoveryBrowser({ t, ctx, onClose }: { t: Translate; ctx: DiscoveryClientContext; onClose: () => void }) {
+  const [tab, setTab] = useState<'browse' | 'scenario'>('browse')
+  const [listing, setListing] = useState<PluginListing | null>(null)
+  const [loadError, setLoadError] = useState(false)
+  const [q, setQ] = useState('')
+  const [cat, setCat] = useState('all')
+  const [preview, setPreview] = useState<PluginEntry | null>(null)
+
+  const load = (): void => {
+    setLoadError(false)
+    fetch('/dsh-discovery/listing', { cache: 'no-store' })
+      .then((res) => { if (!res.ok) throw new Error('HTTP ' + String(res.status)); return res.json() })
+      .then((body: PluginListing) => setListing(body))
+      .catch(() => setLoadError(true))
+  }
+  useEffect(load, [])
+
+  const cats = useMemo(() => orderedCategories(listing), [listing])
+  const plugins = useMemo(() => filterPlugins(listing, { q, cat }), [listing, q, cat])
+
+  const handleReview = (plugin: PluginEntry): void => {
+    onClose()
+    void openSessionAndSend(ctx, buildReviewPrompt(plugin))
+  }
+  const handleInstall = (scenario: Scenario, matched: PluginEntry[]): void => {
+    onClose()
+    void openSessionAndSend(ctx, buildScenarioBatchPrompt(scenario, matched, t))
+  }
+  const handleCustom = (scenario: Scenario, matched: PluginEntry[]): void => {
+    onClose()
+    void openSessionAndSend(ctx, buildScenarioCustomPrompt(scenario, matched, t))
+  }
+
+  return h('div', { style: { height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 } },
+    h('div', { style: tabRowStyle },
+      h('button', { type: 'button', style: tab === 'browse' ? tabOnStyle : tabStyle, onClick: () => setTab('browse') }, t('all')),
+      h('button', { type: 'button', style: tab === 'scenario' ? tabOnStyle : tabStyle, onClick: () => setTab('scenario') }, t('scenariosTab')),
+    ),
+    tab === 'browse' && h('div', { style: { height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 } },
+      h('p', { style: disclaimerStyle }, `⚠️ ${t('disclaimerBody')}`),
+      h('input', {
+        style: searchStyle,
+        placeholder: t('searchPh'),
+        value: q,
+        onChange: (e: React.ChangeEvent<HTMLInputElement>) => setQ(e.target.value),
+      }),
+      h('div', { style: catRowStyle },
+        h('button', { style: cat === 'all' ? catOnStyle : catStyle, onClick: () => setCat('all') }, t('all')),
+        cats.map((c) => h('button', {
+          key: c.id,
+          style: cat === c.id ? catOnStyle : catStyle,
+          onClick: () => setCat(c.id),
+        }, `${c.label} (${c.count})`)),
+      ),
+      h('div', { style: { fontSize: 11, color: 'var(--dsw-alias-label-secondary, #7c7c9c)', marginBottom: 10 } },
+        t('total').replace('{n}', String(listing?.total ?? 0)) + ' · ' + t('fetchedFrom'),
+      ),
+      h('div', { style: bodyStyle, flex: 1 },
+        loadError && h('div', { style: emptyStyle }, t('loadFail') + ' — ' + t('refresh')),
+        !loadError && listing === null && h('div', { style: loadingStyle }, t('loading')),
+        !loadError && listing !== null && plugins.length === 0 && h('div', { style: emptyStyle }, t('empty')),
+        !loadError && listing !== null && plugins.length > 0 && h('div', { style: gridStyle },
+          plugins.map((p) => h(PluginCard, { key: p.htmlUrl, plugin: p, t, onReview: handleReview, onViewRepo: (x) => setPreview(x) })),
+        ),
+      ),
+    ),
+    tab === 'scenario' && h(ScenarioPanel, { listing, t, onInstall: handleInstall, onCustom: handleCustom }),
+    preview !== null && h(RepoPreview, { plugin: preview, t, onClose: () => setPreview(null) }),
+  )
+}
+
+export function apply(ctx: DiscoveryClientContext): void {
+  const NS = 'dsh-discovery'
+  ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-discovery: dictionaries')
+  const t = ctx.locale.bind(NS)
+
+  ctx.slots.inject('sidebar.primary.action', () => ctx.slots.register({
+    name: 'sidebar.primary.action',
+    id: 'dsh-discovery',
+    order: 1,
+    locale: NS,
+  }, (owner: { wide: boolean }) => h(DiscoveryTrigger, { wide: owner.wide ?? false, t, ctx })))
+}
+
+function DiscoveryTrigger({ wide, t, ctx }: { wide: boolean; t: Translate; ctx: DiscoveryClientContext }) {
+  const [open, setOpen] = useState(false)
+  const [hovered, setHovered] = useState(false)
+  const close = (): void => setOpen(false)
+  const closeButton = useRef<HTMLButtonElement | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') close() }
+    document.addEventListener('keydown', onKeyDown)
+    return () => { document.removeEventListener('keydown', onKeyDown) }
+  }, [open])
+  useEffect(() => { if (open) closeButton.current?.focus() }, [open])
+
+  const style = wide ? { ...btnStyle, ...(hovered ? btnHoverStyle : null) } : railStyle
+
+  return h('div', { style: { display: 'contents' } },
+    h('button', {
+      type: 'button',
+      style,
+      title: t('nav'),
+      'aria-label': t('nav'),
+      onMouseEnter: () => setHovered(true),
+      onMouseLeave: () => setHovered(false),
+      onClick: () => setOpen(true),
+    },
+      h(PluginIcon, { size: wide ? 15 : 18 }),
+      wide && h('span', { style: { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, t('nav')),
+    ),
+    open && h('div', { style: maskStyle, onClick: close },
+      h('div', { style: panelStyle, onClick: (e: React.MouseEvent) => e.stopPropagation() },
+        h('div', { style: headerStyle },
+          h(PluginIcon, { size: 15 }),
+          h('span', null, t('nav')),
+          h('span', { style: { fontSize: 11, color: 'var(--dsw-alias-label-secondary, #7c7c9c)', fontWeight: 400 } }, t('subtitle')),
+          h('button', { ref: closeButton, style: closeStyle, onClick: close, 'aria-label': '关闭' }, '✕ 关闭'),
+        ),
+        h('div', { style: { flex: 1, overflowY: 'hidden', padding: '0 4px' } }, h(DiscoveryBrowser, { t, ctx, onClose: close })),
+      ),
+    ),
+  )
+}
