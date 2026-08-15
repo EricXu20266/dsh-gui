@@ -38,6 +38,10 @@ async function renderPng(size, name) {
 await renderPng(16, 'tray-16.png')
 await renderPng(32, 'tray-32.png')
 
+// 512 主图标（macOS .icns 转换要求 ≥512）
+const png512 = await renderPng(512, 'icon-512.png')
+writeFileSync(join(OUT, 'icon-512.png'), readFileSync(png512))
+
 // 256 主图标（窗口 + 安装包）
 const png256 = join(OUT, 'icon-256.png')
 await renderPng(256, 'icon-256.png')

@@ -37,7 +37,10 @@ function resolveDhsRoot(): string {
 
 /** Node 运行时：打包版用捆绑的 node（DHS loader 与 Electron 内置 Node 不兼容），开发态用系统 node */
 function resolveNodeBin(): string {
-  if (app.isPackaged) return join(process.resourcesPath, 'runtime', 'node', 'node.exe')
+  if (app.isPackaged) {
+    const exe = process.platform === 'win32' ? 'node.exe' : 'node'
+    return join(process.resourcesPath, 'runtime', 'node', exe)
+  }
   return 'node'
 }
 

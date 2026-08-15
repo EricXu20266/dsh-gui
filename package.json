@@ -99,6 +99,24 @@
         ]
       }
     ],
+    "mac": {
+      "icon": "resources/icon/icon-512.png",
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ]
+    },
     "win": {
       "signExecutable": false,
       "icon": "resources/icon/icon.ico",

@@ -1,0 +1,86 @@
+name: build-mac-arm64
+
+# macOS ARM64 打包 —— 必须借助 CI：Electron 的 darwin-arm64 二进制与原生模块
+# ABI 只能在 macOS 上获取/重编（Windows 本地无法产出 mac 包）。
+# 手动触发（workflow_dispatch），push 不自动跑，避免浪费 Actions minutes。
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    env:
+      # 无开发者证书：禁用证书自动发现（ad-hoc 签名即可本地运行）
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      # workspace 相对路径布局（与本地 E:\AllinDeepSeek 一致）：
+      #   $GITHUB_WORKSPACE/dsh-gui
+      #   $GITHUB_WORKSPACE/../deepseek-harness  → dsh-gui/../deepseek-harness
+      #   dsh-gui/../dsh-discovery 等三个插件
+      - uses: actions/checkout@v4
+        with:
+          path: dsh-gui
+
+      - uses: actions/checkout@v4
+        with:
+          repository: deepseek-ai/deepseek-harness
+          path: deepseek-harness
+
+      - uses: actions/checkout@v4
+        with:
+          repository: EricXu20266/dsh-discovery
+          path: dsh-discovery
+
+      - uses: actions/checkout@v4
+        with:
+          repository: EricXu20266/dsh-skillmanager
+          path: dsh-skillmanager
+
+      - uses: actions/checkout@v4
+        with:
+          repository: EricXu20266/dsh-mcpmanager
+          path: dsh-mcpmanager
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      # 捆绑 macOS arm64 的 Node 运行时（与 Windows 打包的 v24.15.0 同版本）
+      - name: Bundle macOS arm64 node
+        run: |
+          curl -fsSL -o /tmp/node.tar.gz https://nodejs.org/dist/v24.15.0/node-v24.15.0-darwin-arm64.tar.gz
+          tar -xzf /tmp/node.tar.gz -C /tmp
+          mkdir -p dsh-gui/resources/runtime/node
+          cp /tmp/node-v24.15.0-darwin-arm64/bin/node dsh-gui/resources/runtime/node/node
+          chmod +x dsh-gui/resources/runtime/node/node
+
+      # Windows 生成的 lockfile 缺 darwin-arm64 平台依赖（esbuild 等）→ 不按 lockfile
+      - name: Install dependencies
+        working-directory: dsh-gui
+        run: pnpm install --no-frozen-lockfile
+
+      # 生成图标（含 mac 用的 icon-512.png）
+      - name: Generate icons
+        working-directory: dsh-gui
+        run: node scripts/gen-icons.mjs
+
+      - name: Build main bundle
+        working-directory: dsh-gui
+        run: pnpm build
+
+      - name: Package macOS arm64
+        working-directory: dsh-gui
+        run: npx electron-builder --mac --arm64 --publish never
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-gui-mac-arm64
+          path: |
+            dsh-gui/release/*.dmg
+            dsh-gui/release/*.zip
+          if-no-files-found: error
