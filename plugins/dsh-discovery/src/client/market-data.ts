@@ -143,9 +143,6 @@ export interface Scenario {
   match: RegExp
 }
 
-/** 每个功能簇最多保留的插件数（重复筛选上限）。 */
-export const MAX_PER_FUNCTION = 3
-
 /** Curated user scenarios that map onto community plugin clusters. */
 export const SCENARIOS: Scenario[] = [
   {
@@ -180,10 +177,16 @@ export const SCENARIOS: Scenario[] = [
   },
 ]
 
+/** 每个功能簇最多保留的高星插件数。 */
+export const MAX_PER_FUNCTION = 3
+/** 每个功能簇额外保留的「最近更新」名额，避免纯 star 阈值忽略新项目。 */
+export const NEW_PROJECTS_PER_FUNCTION = 1
+
 /**
  * Plugins matching a scenario with duplicate filtering: each functional
- * keyword cluster keeps only the top {@link MAX_PER_FUNCTION} by stars
- * (then recency), so a scenario with many similar plugins stays lean.
+ * keyword cluster keeps the top {@link MAX_PER_FUNCTION} by stars plus
+ * {@link NEW_PROJECTS_PER_FUNCTION} most-recently-updated newcomers, so a
+ * scenario stays lean without ignoring fresh projects.
  */
 export function scenarioPlugins(listing: PluginListing | null, scenario: Scenario): PluginEntry[] {
   const matched = (listing?.plugins ?? []).filter((p) => {
@@ -199,11 +202,17 @@ export function scenarioPlugins(listing: PluginListing | null, scenario: Scenari
     if (group === undefined) byKeyword.set(keyword, [plugin])
     else group.push(plugin)
   }
-  // 每个功能簇取 star 前 MAX_PER_FUNCTION，合并去重后整体按 star 排序
+  // 每个功能簇：高星前 MAX_PER_FUNCTION ∪ 最近更新前 NEW_PROJECTS_PER_FUNCTION（去重）
   const picked = new Map<string, PluginEntry>()
   for (const group of byKeyword.values()) {
-    group.sort((a, b) => b.stars - a.stars || b.updatedAt.localeCompare(a.updatedAt))
-    for (const plugin of group.slice(0, MAX_PER_FUNCTION)) picked.set(plugin.htmlUrl, plugin)
+    const byStars = [...group]
+      .sort((a, b) => b.stars - a.stars || b.updatedAt.localeCompare(a.updatedAt))
+      .slice(0, MAX_PER_FUNCTION)
+    const byRecent = [...group]
+      .filter((p) => !byStars.some((s) => s.htmlUrl === p.htmlUrl))
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      .slice(0, NEW_PROJECTS_PER_FUNCTION)
+    for (const plugin of [...byStars, ...byRecent]) picked.set(plugin.htmlUrl, plugin)
   }
   return [...picked.values()].sort((a, b) => b.stars - a.stars || b.updatedAt.localeCompare(a.updatedAt))
 }
