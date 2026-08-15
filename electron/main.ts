@@ -18,9 +18,9 @@
 import { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage } from 'electron'
 import { spawn, execFileSync, type ChildProcess } from 'node:child_process'
 import net from 'node:net'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { load as yamlLoad, dump as yamlDump } from 'js-yaml'
 
 /**
@@ -49,6 +49,22 @@ function resolvePnpmCli(): string {
 
 const DHS_ROOT = resolveDhsRoot()
 const DHS_HOME = process.env.DSH_HOME ?? '' // 让 host 子进程继承当前 DSH_HOME
+
+/** 安装日志文件路径（打包版可查：%APPDATA%/dsh-gui/install.log，用户目录里 dsh-gui 文件夹下） */
+let installLogPath = ''
+
+/** 安装日志：同时写控制台 + 落盘文件（打包版无控制台，必须落盘用户才能看到） */
+function logInstall(msg: string): void {
+  const line = `[${new Date().toISOString()}] ${msg}`
+  console.log(line)
+  if (installLogPath) {
+    try {
+      appendFileSync(installLogPath, line + '\n')
+    } catch {
+      // 日志写入失败不阻塞安装流程
+    }
+  }
+}
 
 let hostProc: ChildProcess | undefined
 let wizardWin: BrowserWindow | null = null
@@ -104,7 +120,7 @@ interface ProgressEvent {
 
 type ProgressCb = (p: ProgressEvent) => void
 
-/** 运行子进程直到退出；onLine 可逐行接收 stdout；env 可注入额外环境变量 */
+/** 运行子进程直到退出；onLine 可逐行接收 stdout；env 可注入额外环境变量；输出同步落盘到安装日志 */
 function runChild(
   bin: string,
   args: string[],
@@ -113,15 +129,22 @@ function runChild(
   env?: Record<string, string>,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    logInstall(`> ${bin} ${args.join(' ')}`)
     const p = spawn(bin, args, { cwd, windowsHide: true, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] })
     p.stdout?.on('data', (d) => {
       const text = d.toString()
-      process.stdout.write(`[deps] ${text}`)
+      logInstall(`[out] ${text.trimEnd()}`)
       if (onLine) for (const line of text.split('\n')) if (line.trim()) onLine(line)
     })
-    p.stderr?.on('data', (d) => process.stderr.write(`[deps:err] ${d.toString()}`))
-    p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(`子进程退出码 ${code}`))))
-    p.on('error', reject)
+    p.stderr?.on('data', (d) => logInstall(`[err] ${d.toString().trimEnd()}`))
+    p.on('exit', (code) => {
+      logInstall(`< exit ${code}`)
+      code === 0 ? resolve() : reject(new Error(`子进程退出码 ${code}`))
+    })
+    p.on('error', (err) => {
+      logInstall(`< spawn error: ${err.message}`)
+      reject(err)
+    })
   })
 }
 
@@ -178,6 +201,17 @@ function parsePnpmEvent(evt: Record<string, unknown>, onProgress: ProgressCb): v
 
 /** 首次安装 DHS 依赖：按下载源配置 → bootstrap pnpm → pnpm install（ndjson 推进度） */
 async function installDhsDeps(config: { registry: string; proxy: string; useSystemProxy: boolean; locale?: 'zh' | 'en' }, onProgress: ProgressCb): Promise<void> {
+  // 初始化安装日志（打包版无控制台，安装全过程落盘到 userData/install.log）
+  try {
+    installLogPath = join(app.getPath('userData'), 'install.log')
+    mkdirSync(dirname(installLogPath), { recursive: true })
+    appendFileSync(installLogPath, `\n===== 安装开始 ${new Date().toISOString()} =====\n`)
+  } catch {
+    installLogPath = ''
+  }
+  logInstall(`DHS_ROOT=${DHS_ROOT}`)
+  logInstall(`app.isPackaged=${app.isPackaged}`)
+
   const nodeBin = resolveNodeBin()
   const pnpmCli = resolvePnpmCli()
 
@@ -192,17 +226,18 @@ async function installDhsDeps(config: { registry: string; proxy: string; useSyst
     env.npm_config_proxy = proxy
     env.npm_config_https_proxy = proxy
   }
-  console.log(`[dsh-gui] 安装 DHS 依赖 registry=${config.registry} proxy=${proxy ?? '无'}`)
+  logInstall(`registry=${config.registry} proxy=${proxy ?? '无'}`)
 
   // pnpm 已捆绑（打包版 resources/runtime/pnpm；开发态用系统 pnpm），直接 install
   onProgress({ stage: 'download', percent: 8, message: '开始安装依赖…' })
   // Windows 深路径下 junction 创建可能被 Defender 实时防护随机中断（pnpm 报 done 但链接缺失），
-  // 失败自动重试（最多 3 次）并用关键链接完整性验证兜底。
+  // 失败自动重试（最多 3 次）；完整性用「内核可运行性」验证（dsh CLI --version 能跑 = 依赖完整）。
   const MAX_ATTEMPTS = 3
   let installed = false
   for (let attempt = 1; attempt <= MAX_ATTEMPTS && !installed; attempt++) {
     if (attempt > 1) {
       onProgress({ stage: 'download', percent: 8, message: `安装中断，正在重试（${attempt}/${MAX_ATTEMPTS}）…` })
+      logInstall(`>>> 第 ${attempt} 次安装尝试`)
       await new Promise((r) => setTimeout(r, 5000))
     }
     try {
@@ -213,14 +248,22 @@ async function installDhsDeps(config: { registry: string; proxy: string; useSyst
           // 非 JSON 行（warn 等）忽略
         }
       }, env)
-      // 链接完整性验证：apps/cli 的直接依赖 commander（pnpm 隔离布局，应存在于包级 node_modules）
-      installed = existsSync(join(DHS_ROOT, 'apps', 'cli', 'node_modules', 'commander'))
-      if (!installed) console.warn('[dsh-gui] 依赖链接不完整，触发重试')
+      // 内核完整性验证：直接跑 dsh CLI --version（能跑 = apps/cli 依赖链接完整，比查单个链接可靠）
+      try {
+        const v = execFileSync(nodeBin, [join(DHS_ROOT, 'apps', 'cli', 'lib', 'bin.js'), '--version'], {
+          encoding: 'utf8', cwd: DHS_ROOT, env: { ...process.env, ...env }, windowsHide: true, timeout: 60000,
+        })
+        installed = true
+        logInstall(`内核验证通过（dsh ${v.trim()}）`)
+      } catch (verr) {
+        installed = false
+        logInstall(`内核验证失败（链接不完整或 bin.js 缺依赖）: ${String(verr).slice(0, 300)}`)
+      }
     } catch (err) {
-      console.warn(`[dsh-gui] 依赖安装尝试 ${attempt}/${MAX_ATTEMPTS} 失败:`, err)
+      logInstall(`依赖安装尝试 ${attempt}/${MAX_ATTEMPTS} 失败: ${String(err)}`)
     }
   }
-  if (!installed) throw new Error('依赖安装多次失败，请检查网络后重试')
+  if (!installed) throw new Error('依赖安装多次失败，请检查网络后重试（详情见安装日志）')
 
   // 打包版：把内置插件 dsh-discovery 安装进 web profile（GUI 基础特色——插件市场入口）
   // 容错：插件安装失败不阻断主流程（首次会初始化 profile 联网装 bundle，可能较慢/受网络影响），
@@ -229,14 +272,18 @@ async function installDhsDeps(config: { registry: string; proxy: string; useSyst
     const pluginDir = join(process.resourcesPath, 'dsh-discovery')
     if (existsSync(join(pluginDir, 'package.json'))) {
       onProgress({ stage: 'download', percent: 95, message: '安装插件市场组件…' })
+      logInstall(`>>> 安装插件 dsh-discovery（${pluginDir}）`)
       try {
         await runChild(nodeBin, [
           join(DHS_ROOT, 'apps', 'cli', 'lib', 'bin.js'),
           'plugin', '--profile', 'web', 'add', pluginDir,
-        ], DHS_ROOT, undefined, env)
+        ], DHS_ROOT, (line) => logInstall(`[plugin] ${line}`), env)
+        logInstall('插件安装成功')
       } catch (err) {
-        console.warn('[dsh-gui] 插件 dsh-discovery 安装失败（不影响主流程）:', err)
+        logInstall(`插件安装失败（不影响主流程）: ${String(err)}`)
       }
+    } else {
+      logInstall('警告：resources/dsh-discovery/package.json 不存在，跳过插件安装')
     }
   }
 
@@ -244,6 +291,7 @@ async function installDhsDeps(config: { registry: string; proxy: string; useSyst
   onProgress({ stage: 'verify', percent: 96, message: '校验安装结果…' })
   if (!isDhsInstalled()) throw new Error('依赖安装后未找到 node_modules，请重试')
   if (!existsSync(join(DHS_ROOT, 'apps', 'cli', 'lib', 'bin.js'))) throw new Error('DHS 可执行文件缺失（apps/cli/lib/bin.js）')
+  logInstall('===== 安装完成 =====')
   onProgress({ stage: 'verify', percent: 100, message: '安装完成' })
 }
 
@@ -375,7 +423,8 @@ ipcMain.handle('setup:install', async (_e, config: { registry: string; proxy: st
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[dsh-gui] install failed:', msg)
-    return { ok: false, error: msg }
+    const logHint = installLogPath ? `（详细日志：${installLogPath}）` : ''
+    return { ok: false, error: `${msg}${logHint}` }
   }
 })
 
