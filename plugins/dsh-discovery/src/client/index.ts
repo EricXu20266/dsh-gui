@@ -17,9 +17,28 @@ export const name = 'dsh-discovery'
 // Locale + slots + session orchestration injected before apply runs.
 export const inject = ['slots', 'locale', 'sessions', 'workspaces']
 
-/** Listing 模块级缓存：TTL 过期（定时）或 app 重启（模块变量清空）自然重置。 */
+/** Listing 缓存：sessionStorage（关闭标签页 = app 重启即清空）+ TTL 定时过期。 */
 const LISTING_TTL_MS = 10 * 60 * 1000
-let listingCache: { at: number; data: PluginListing | null } = { at: 0, data: null }
+const LISTING_CACHE_KEY = 'dshd.listing.cache.v1'
+
+function readListingCache(): PluginListing | null {
+  try {
+    const raw = sessionStorage.getItem(LISTING_CACHE_KEY)
+    if (raw === null) return null
+    const parsed = JSON.parse(raw) as { at: number; data: PluginListing }
+    return Date.now() - parsed.at < LISTING_TTL_MS ? parsed.data : null
+  } catch {
+    return null
+  }
+}
+
+function writeListingCache(data: PluginListing): void {
+  try {
+    sessionStorage.setItem(LISTING_CACHE_KEY, JSON.stringify({ at: Date.now(), data }))
+  } catch {
+    // storage 不可用（隐私模式等）时静默降级为每次拉取
+  }
+}
 
 export interface LocaleService {
   register(namespace: string, dicts: { zh: Record<string, string>; en: Record<string, string> }): unknown
@@ -551,16 +570,17 @@ function DiscoveryBrowser({ t, ctx, onClose, onFetched }: {
 
   const load = (): void => {
     setLoadError(false)
-    // 模块级缓存：TTL 内直接使用，避免每次打开面板都重新拉取 GitHub
-    if (listingCache.data !== null && Date.now() - listingCache.at < LISTING_TTL_MS) {
-      setListing(listingCache.data)
-      onFetched(listingCache.data.fetchedAt)
+    // sessionStorage 缓存：TTL 内直接使用，避免每次打开面板都重新拉取 GitHub
+    const cached = readListingCache()
+    if (cached !== null) {
+      setListing(cached)
+      onFetched(cached.fetchedAt)
       return
     }
     fetch('/dsh-discovery/listing', { cache: 'no-store' })
       .then((res) => { if (!res.ok) throw new Error('HTTP ' + String(res.status)); return res.json() })
       .then((body: PluginListing) => {
-        listingCache = { at: Date.now(), data: body }
+        writeListingCache(body)
         setListing(body)
         onFetched(body.fetchedAt)
       })
