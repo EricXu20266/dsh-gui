@@ -274,31 +274,36 @@ async function installDhsDeps(config: { registry: string; proxy: string; useSyst
   }
   if (!installed) throw new Error('依赖安装多次失败，请检查网络后重试（详情见安装日志）')
 
-  // 打包版：把内置插件 dsh-discovery 安装进 web profile（GUI 基础特色——插件市场入口）
+  // 打包版：把内置插件安装进 web profile（GUI 基础特色——插件搜索、技能管理、MCP 管理）
   // 容错：插件安装失败不阻断主流程（首次会初始化 profile 联网装 bundle，可能较慢/受网络影响），
   // 失败仅记录，主界面照常启动（插件可在后续应用内补装）。
   if (app.isPackaged) {
-    const pluginDir = join(process.resourcesPath, 'dsh-discovery')
-    if (existsSync(join(pluginDir, 'package.json'))) {
-      onProgress({ stage: 'download', percent: 95, message: '安装插件市场组件…' })
-      logInstall(`>>> 安装插件 dsh-discovery（${pluginDir}）`)
+    const bundledPlugins = ['dsh-discovery', 'dsh-skillmanager', 'dsh-mcpmanager']
+    const profileDir = join(DHS_HOME || join(homedir(), '.dsh'), 'profiles', 'web')
+    for (const pluginName of bundledPlugins) {
+      const pluginDir = join(process.resourcesPath, pluginName)
+      if (!existsSync(join(pluginDir, 'package.json'))) {
+        logInstall(`警告：resources/${pluginName}/package.json 不存在，跳过插件安装`)
+        continue
+      }
+      onProgress({ stage: 'download', percent: 95, message: `安装内置组件 ${pluginName}…` })
+      logInstall(`>>> 安装插件 ${pluginName}（${pluginDir}）`)
 
-      // 自愈：清理 profile 中失效的 dsh-discovery file: 链接。
+      // 自愈：清理 profile 中失效的 <plugin> file: 链接。
       // 背景：dev 环境 `dsh plugin add` 会把 file: 绝对路径写入 ~/.dsh/profiles/web/package.json，
       // 项目改名/迁移后旧路径失效（ENOENT），plugin add 解析 profile 现有依赖时会整体失败。
-      const profileDir = join(DHS_HOME || join(homedir(), '.dsh'), 'profiles', 'web')
       const profilePkg = join(profileDir, 'package.json')
       if (existsSync(profilePkg)) {
         try {
           const doc = JSON.parse(readFileSync(profilePkg, 'utf8')) as { dependencies?: Record<string, string> }
-          const dep = doc?.dependencies?.['dsh-discovery']
+          const dep = doc?.dependencies?.[pluginName]
           if (typeof dep === 'string' && dep.startsWith('file:')) {
             const target = dep.slice('file:'.length)
             if (!existsSync(join(target, 'package.json'))) {
-              logInstall(`修复：profile 中 dsh-discovery 指向失效路径（${dep}），移除旧依赖后重装`)
-              if (doc.dependencies) delete doc.dependencies['dsh-discovery']
+              logInstall(`修复：profile 中 ${pluginName} 指向失效路径（${dep}），移除旧依赖后重装`)
+              if (doc.dependencies) delete doc.dependencies[pluginName]
               writeFileSync(profilePkg, JSON.stringify(doc, null, 2))
-              rmSync(join(profileDir, 'node_modules', 'dsh-discovery'), { recursive: true, force: true })
+              rmSync(join(profileDir, 'node_modules', pluginName), { recursive: true, force: true })
             }
           }
         } catch (e) {
@@ -311,12 +316,10 @@ async function installDhsDeps(config: { registry: string; proxy: string; useSyst
           join(DHS_ROOT, 'apps', 'cli', 'lib', 'bin.js'),
           'plugin', '--profile', 'web', 'add', pluginDir,
         ], DHS_ROOT, (line) => logInstall(`[plugin] ${line}`), env)
-        logInstall('插件安装成功')
+        logInstall(`插件 ${pluginName} 安装成功`)
       } catch (err) {
-        logInstall(`插件安装失败（不影响主流程）: ${String(err)}`)
+        logInstall(`插件 ${pluginName} 安装失败（不影响主流程）: ${String(err)}`)
       }
-    } else {
-      logInstall('警告：resources/dsh-discovery/package.json 不存在，跳过插件安装')
     }
   }
 

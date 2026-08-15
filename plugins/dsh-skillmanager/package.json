@@ -1,0 +1,56 @@
+{
+  "name": "dsh-skillmanager",
+  "description": "DSH skill manager — list, inspect, enable/disable skills on disk and delegate creation/editing to the host agent. · DSH 技能管理器：列出/查看/启用禁用本机技能，创建与编辑交由 agent 完成。",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./client/client.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "license": "MIT",
+  "files": [
+    "lib",
+    "client",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-locale"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "bundle:client": "tsdown",
+    "prepare": "node scripts/prepare.mjs"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-skill": "workspace:^",
+    "@deepseek-ai/dsh-skill-filesystem": "workspace:^",
+    "js-yaml": "^5.3.0",
+    "@types/node": "^24.0.0",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3"
+  }
+}

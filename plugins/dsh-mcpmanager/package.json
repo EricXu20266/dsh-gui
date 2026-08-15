@@ -1,0 +1,54 @@
+{
+  "name": "dsh-mcpmanager",
+  "description": "DSH MCP manager — inspect, add, edit and remove MCP server configs in the profile patch; restarts are delegated to the host agent. · DSH MCP 管理器：查看/新增/编辑/删除 profile 中的 MCP server 配置，重启生效交由 agent 处理。",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./client/client.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "license": "MIT",
+  "files": [
+    "lib",
+    "client",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-locale"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "bundle:client": "tsdown",
+    "prepare": "node scripts/prepare.mjs"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "js-yaml": "^5.3.0",
+    "@types/node": "^24.0.0",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3"
+  }
+}

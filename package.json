@@ -71,6 +71,30 @@
           "!**/tsconfig*.json",
           "!**/tsdown.config.ts"
         ]
+      },
+      {
+        "from": "plugins/dsh-skillmanager",
+        "to": "dsh-skillmanager",
+        "filter": [
+          "**/*",
+          "!**/node_modules/**",
+          "!**/src/**",
+          "!**/*.tsbuildinfo",
+          "!**/*.map",
+          "!**/scripts/**"
+        ]
+      },
+      {
+        "from": "plugins/dsh-mcpmanager",
+        "to": "dsh-mcpmanager",
+        "filter": [
+          "**/*",
+          "!**/node_modules/**",
+          "!**/src/**",
+          "!**/*.tsbuildinfo",
+          "!**/*.map",
+          "!**/scripts/**"
+        ]
       }
     ],
     "win": {

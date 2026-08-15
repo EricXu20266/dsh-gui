@@ -8816,6 +8816,48 @@ importers:
         specifier: ^2.0.17
         version: 2.0.17(mermaid@11.16.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.2.0)(search-insights@2.17.3)(typescript@7.0.2))
 
+  plugins/dsh-mcpmanager:
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: ^4.0.1
+        version: link:../../../deepseek-harness/vendor/cordis
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.3
+      js-yaml:
+        specifier: ^5.3.0
+        version: 5.3.0
+      tsdown:
+        specifier: ^0.22.2
+        version: 0.22.14(oxc-resolver@11.24.2)(publint@0.3.23)(tsx@4.23.12)(typescript@6.0.3)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  plugins/dsh-skillmanager:
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: ^4.0.1
+        version: link:../../../deepseek-harness/vendor/cordis
+      '@deepseek-ai/dsh-skill':
+        specifier: workspace:^
+        version: link:../../../deepseek-harness/packages/skill/skill
+      '@deepseek-ai/dsh-skill-filesystem':
+        specifier: workspace:^
+        version: link:../../../deepseek-harness/packages/skill/skill-filesystem
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.3
+      js-yaml:
+        specifier: ^5.3.0
+        version: 5.3.0
+      tsdown:
+        specifier: ^0.22.2
+        version: 0.22.14(oxc-resolver@11.24.2)(publint@0.3.23)(tsx@4.23.12)(typescript@6.0.3)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
 packages:
 
   '@agentclientprotocol/sdk@0.25.1':
