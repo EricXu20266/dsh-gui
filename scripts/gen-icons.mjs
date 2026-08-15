@@ -13,7 +13,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const ROOT = join(import.meta.dirname, '..')
-const SVG_SRC = 'E:/AllinDeepSeek/deepseek-harness/apps/web/public/favicon.svg'
+// DHS favicon：相对路径（本地 E:/AllinDeepSeek/DSH-GUI/../deepseek-harness；CI $GITHUB_WORKSPACE/dsh-gui/../deepseek-harness）
+const SVG_SRC = join(ROOT, '..', 'deepseek-harness', 'apps', 'web', 'public', 'favicon.svg')
 const OUT = join(ROOT, 'resources', 'icon')
 const TMP = mkdtempSync(join(tmpdir(), 'dsh-icons-')) // ico 中间 PNG 放系统临时目录，不污染 resources/
 
