@@ -1,6 +1,6 @@
 {
   "name": "dsh-gui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "DHS (DeepSeek Harness) Electron GUI client — webui → gui, in-process host, kernel untouched",
   "type": "module",
@@ -88,6 +88,32 @@
       {
         "from": "../dsh-mcpmanager",
         "to": "dsh-mcpmanager",
+        "filter": [
+          "**/*",
+          "!**/node_modules/**",
+          "!**/.git/**",
+          "!**/src/**",
+          "!**/*.tsbuildinfo",
+          "!**/*.map",
+          "!**/scripts/**"
+        ]
+      },
+      {
+        "from": "../dsh-proxy",
+        "to": "dsh-proxy",
+        "filter": [
+          "**/*",
+          "!**/node_modules/**",
+          "!**/.git/**",
+          "!**/src/**",
+          "!**/*.tsbuildinfo",
+          "!**/*.map",
+          "!**/scripts/**"
+        ]
+      },
+      {
+        "from": "plugins/dsh-about",
+        "to": "dsh-about",
         "filter": [
           "**/*",
           "!**/node_modules/**",
