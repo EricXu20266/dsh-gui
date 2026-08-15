@@ -8,19 +8,27 @@
  */
 import sharp from 'sharp'
 import pngToIco from 'png-to-ico'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const ROOT = join(import.meta.dirname, '..')
 const SVG_SRC = 'E:/AllinDeepSeek/deepseek-harness/apps/web/public/favicon.svg'
 const OUT = join(ROOT, 'resources', 'icon')
 
+// DeepSeek 品牌蓝（--dsw-static-deepseek-500）
+const DEEPSEEK_BLUE = '#4176E6'
+
 mkdirSync(OUT, { recursive: true })
+
+/** 黑色鲸鱼 → DeepSeek 蓝色（黑色任务栏上不可见，蓝色浅深任务栏都清晰） */
+const svgText = readFileSync(SVG_SRC, 'utf8')
+  .replaceAll('fill="#000"', `fill="${DEEPSEEK_BLUE}"`)
+  .replaceAll('path { fill: #fff; }', `path { fill: ${DEEPSEEK_BLUE}; }`)
 
 /** 渲染 SVG 到指定尺寸 PNG 并落盘，返回文件路径 */
 async function renderPng(size, name) {
   const file = join(OUT, name)
-  await sharp(SVG_SRC, { density: 300 }).resize(size, size).png().toFile(file)
+  await sharp(Buffer.from(svgText), { density: 300 }).resize(size, size).png().toFile(file)
   return file
 }
 
