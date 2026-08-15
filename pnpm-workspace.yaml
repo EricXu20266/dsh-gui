@@ -3,7 +3,6 @@
 packages:
   - "."
   - "../deepseek-harness"
-  - "plugins/dsh-discovery"
   - "../deepseek-harness/vendor/*"
   - "../deepseek-harness/packages/*/*"
   - "../deepseek-harness/native/landlock-run"

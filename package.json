@@ -56,12 +56,20 @@
         ]
       },
       {
-        "from": "plugins/dsh-discovery",
+        "from": "../dsh-discovery",
         "to": "dsh-discovery",
         "filter": [
           "**/*",
           "!**/node_modules/**",
-          "!**/*.tsbuildinfo"
+          "!**/.git/**",
+          "!**/src/**",
+          "!**/*.tsbuildinfo",
+          "!**/*.map",
+          "!**/install.log",
+          "!**/.gitignore",
+          "!**/pnpm-lock.yaml",
+          "!**/tsconfig*.json",
+          "!**/tsdown.config.ts"
         ]
       }
     ],
