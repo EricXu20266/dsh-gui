@@ -1,5 +1,5 @@
 /**
- * dhs-gui main process — P0-A: Electron 窗口 + DHS host 子进程。
+ * dsh-gui main process — P0-A: Electron 窗口 + DHS host 子进程。
  *
  * 为什么不用 in-process：
  * DHS 的 cordis loader 依赖 Node 内部 API（node-addon-require-builtin 获取
@@ -51,7 +51,7 @@ async function startHost(): Promise<number> {
   hostProc.stdout?.on('data', (d) => process.stdout.write(`[host] ${d}`))
   hostProc.stderr?.on('data', (d) => process.stderr.write(`[host:err] ${d}`))
   hostProc.on('exit', (code) => {
-    console.log(`[dhs-gui] host exited with code ${code}`)
+    console.log(`[dsh-gui] host exited with code ${code}`)
     if (hostProc === undefined) return
     hostProc = undefined
     // host 意外退出则关闭应用
@@ -59,7 +59,7 @@ async function startHost(): Promise<number> {
   })
   const port = 3080 // DHS web profile 默认端口
   await waitForPort(port)
-  console.log(`[dhs-gui] host ready on ${port}`)
+  console.log(`[dsh-gui] host ready on ${port}`)
   return port
 }
 
@@ -81,31 +81,31 @@ app.whenReady().then(async () => {
       return { action: 'deny' }
     })
     win.webContents.on('did-fail-load', (_e, code, desc, url) => {
-      console.error(`[dhs-gui] load failed (${code}): ${desc} for ${url}`)
+      console.error(`[dsh-gui] load failed (${code}): ${desc} for ${url}`)
     })
     win.webContents.on('render-process-gone', (_e, details) => {
-      console.error(`[dhs-gui] renderer gone: reason=${details.reason} exitCode=${details.exitCode}`)
+      console.error(`[dsh-gui] renderer gone: reason=${details.reason} exitCode=${details.exitCode}`)
     })
-    win.on('close', () => console.log('[dhs-gui] window close event'))
-    win.on('closed', () => console.log('[dhs-gui] window closed event'))
+    win.on('close', () => console.log('[dsh-gui] window close event'))
+    win.on('closed', () => console.log('[dsh-gui] window closed event'))
     await win.loadURL(`http://127.0.0.1:${port}`)
-    console.log('[dhs-gui] window loaded')
+    console.log('[dsh-gui] window loaded')
   } catch (error) {
-    console.error('[dhs-gui] start failed:', error)
+    console.error('[dsh-gui] start failed:', error)
     app.quit()
   }
 })
 
 app.on('window-all-closed', () => {
-  console.log('[dhs-gui] window-all-closed')
+  console.log('[dsh-gui] window-all-closed')
   hostProc?.kill()
   app.quit()
 })
-app.on('before-quit', () => console.log('[dhs-gui] before-quit'))
-app.on('quit', (_e, code) => console.log(`[dhs-gui] app quit code=${code}`))
+app.on('before-quit', () => console.log('[dsh-gui] before-quit'))
+app.on('quit', (_e, code) => console.log(`[dsh-gui] app quit code=${code}`))
 
-process.on('uncaughtException', (err) => console.error('[dhs-gui] uncaught:', err))
-process.on('unhandledRejection', (reason) => console.error('[dhs-gui] unhandledRejection:', reason))
+process.on('uncaughtException', (err) => console.error('[dsh-gui] uncaught:', err))
+process.on('unhandledRejection', (reason) => console.error('[dsh-gui] unhandledRejection:', reason))
 
 app.on('window-all-closed', () => {
   hostProc?.kill()

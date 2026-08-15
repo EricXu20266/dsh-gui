@@ -1,4 +1,4 @@
-# dhs-gui workspace —— 把 deepseek-harness 整个并进来作为 workspace 成员
+# dsh-gui workspace —— 把 deepseek-harness 整个并进来作为 workspace 成员
 # 注意：嵌套 workspace 不生效，必须把 DHS 的所有 packages glob 在此展开
 packages:
   - "."
@@ -15,7 +15,7 @@ packages:
 
 linkWorkspacePackages: true
 
-# 复制自 deepseek-harness/pnpm-workspace.yaml（link: 路径按 workspace 根 dhs-gui 解析，需指回 DHS 仓库）
+# 复制自 deepseek-harness/pnpm-workspace.yaml（link: 路径按 workspace 根 dsh-gui 解析，需指回 DHS 仓库）
 overrides:
   '@deepseek-ai/cosmokit': 'link:../deepseek-harness/vendor/cosmokit'
   '@deepseek-ai/schemastery': 'link:../deepseek-harness/vendor/schemastery'

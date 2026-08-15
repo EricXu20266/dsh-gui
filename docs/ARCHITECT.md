@@ -1,4 +1,4 @@
-# dhs-gui 架构骨架（ARCHITECT）
+# dsh-gui 架构骨架（ARCHITECT）
 
 > 用「1+3+3+场」拓扑 + Root 判定四条标准收敛。借鉴 IME 结构，内容针对 DHS GUI 客户端定制。
 

@@ -1,4 +1,4 @@
-# dhs-gui — 开发环境与工作流
+# dsh-gui — 开发环境与工作流
 
 > 📘 本文件由 AI 自动生成，是项目的 **L2 宪法**。
 > 所有 AI 辅助开发遵循此文件的约定。
@@ -10,7 +10,7 @@
 
 | 字段 | 值 |
 |------|-----|
-| 项目名称 | dhs-gui (DeepSeek Harness GUI) |
+| 项目名称 | dsh-gui (DeepSeek Harness GUI) |
 | 项目类型 | 桌面应用（Electron GUI 客户端） |
 | 技术栈 | Electron 43 + Node 24 + TypeScript + esbuild + Biome |
 | 内核依赖 | [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) — 本地 workspace 引用，内核零改动 |
@@ -22,11 +22,11 @@
 ## 目录结构
 
 ```
-dhs-gui/
+dsh-gui/
 ├── .editorconfig              # 编辑器行为统一
 ├── .gitignore
 ├── biome.json                 # Lint + Format 配置
-├── dhs-gui.md                 # 本文件 — L2 宪法
+├── DSH-GUI.md                 # 本文件 — L2 宪法
 ├── electron/                  # GUI 壳引擎（核心）
 │   ├── main.ts                # 主进程：spawn DHS host + 窗口生命周期
 │   ├── preload.ts             # preload 桥（IPC 载体，P1 启用）
@@ -77,7 +77,7 @@ dhs-gui/
 
 ### 远程仓库
 - 平台：GitHub
-- 仓库：`dhs-gui`（重名则 `dhs-gui-taishen`）
+- 仓库：`dsh-gui`（重名则 `dsh-gui-taishen`）
 - 认证方式：HTTPS Token（gh CLI）
 
 ### 分支模型

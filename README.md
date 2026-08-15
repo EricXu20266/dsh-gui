@@ -1,4 +1,4 @@
-# dhs-gui — DeepSeek Harness 桌面客户端
+# dsh-gui — DeepSeek Harness 桌面客户端
 
 > DHS (DeepSeek Harness) 的 Electron GUI 客户端：把 web ui 的使用方式封装为原生桌面 GUI。内核最大限度的保持 DHS。
 
@@ -6,7 +6,7 @@
 [![Node](https://img.shields.io/badge/Node-24+-green.svg)](https://nodejs.org)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-DHS 官方以 web ui（浏览器）形态交付。dhs-gui 用 Electron 承载同一套 DHS 前端，把「浏览器里打开网页」变成「桌面应用」，同时保持 DHS 内核零改动。
+DHS 官方以 web ui（浏览器）形态交付。dsh-gui 用 Electron 承载同一套 DHS 前端，把「浏览器里打开网页」变成「桌面应用」，同时保持 DHS 内核零改动。
 
 ---
 
@@ -14,7 +14,7 @@ DHS 官方以 web ui（浏览器）形态交付。dhs-gui 用 Electron 承载同
 
 ```
 ┌─────────────────────────────────────────────┐
-│ Electron App（dhs-gui）                       │
+│ Electron App（dsh-gui）                       │
 │  main 进程 ──spawn──> DHS host 子进程（系统 Node）│
 │     │                    └─ apps/cli/bin.js  │
 │     │                        --profile web   │
@@ -47,7 +47,7 @@ pnpm build && pnpm start
 ## 目录结构
 
 ```
-dhs-gui/
+dsh-gui/
 ├── electron/        # GUI 壳引擎（main/preload/renderer）
 ├── platform/        # 平台适配（windows 打包 / macos 预留）
 ├── resources/       # 资源（图标等）

@@ -1,5 +1,5 @@
 {
-  "name": "dhs-gui",
+  "name": "dsh-gui",
   "version": "0.1.0",
   "private": true,
   "description": "DHS (DeepSeek Harness) Electron GUI client — webui → gui, in-process host, kernel untouched",

@@ -20,7 +20,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/EricXu20266/dhs-gui.git"
+    "url": "git+https://github.com/EricXu20266/dsh-gui.git"
   },
   "dsh": {
     "bundle": {
