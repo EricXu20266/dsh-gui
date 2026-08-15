@@ -223,14 +223,20 @@ async function installDhsDeps(config: { registry: string; proxy: string; useSyst
   if (!installed) throw new Error('依赖安装多次失败，请检查网络后重试')
 
   // 打包版：把内置插件 dsh-discovery 安装进 web profile（GUI 基础特色——插件市场入口）
+  // 容错：插件安装失败不阻断主流程（首次会初始化 profile 联网装 bundle，可能较慢/受网络影响），
+  // 失败仅记录，主界面照常启动（插件可在后续应用内补装）。
   if (app.isPackaged) {
     const pluginDir = join(process.resourcesPath, 'dsh-discovery')
     if (existsSync(join(pluginDir, 'package.json'))) {
       onProgress({ stage: 'download', percent: 95, message: '安装插件市场组件…' })
-      await runChild(nodeBin, [
-        join(DHS_ROOT, 'apps', 'cli', 'lib', 'bin.js'),
-        'plugin', '--profile', 'web', 'add', pluginDir,
-      ], DHS_ROOT, undefined, env)
+      try {
+        await runChild(nodeBin, [
+          join(DHS_ROOT, 'apps', 'cli', 'lib', 'bin.js'),
+          'plugin', '--profile', 'web', 'add', pluginDir,
+        ], DHS_ROOT, undefined, env)
+      } catch (err) {
+        console.warn('[dsh-gui] 插件 dsh-discovery 安装失败（不影响主流程）:', err)
+      }
     }
   }
 
