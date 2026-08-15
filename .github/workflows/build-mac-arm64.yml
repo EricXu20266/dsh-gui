@@ -49,9 +49,20 @@ jobs:
         working-directory: dsh-gui
         run: pnpm install --no-frozen-lockfile
 
-      # Electron 43+ 不再有 postinstall 下载二进制（脚本改名 install-electron，
-      # pnpm strictDepBuilds 不识别非 lifecycle 脚本名 → 永不执行）→ 显式下载
-      # darwin-arm64 二进制到 node_modules/electron/dist（electronDist 配置依赖它）
+      # resources/runtime/ 整体被 .gitignore（本地手工准备的运行时产物）→ CI 需自取：
+      # 1) pnpm standalone（npm registry tarball，dist/node_modules 内置全平台依赖）
+      # 2) Electron darwin-arm64 二进制（electron 43+ 无 postinstall，脚本改名 install-electron，
+      #    pnpm strictDepBuilds 不识别非 lifecycle 名 → 永不执行 → 显式下载到 dist）
+      - name: Fetch pnpm runtime
+        working-directory: dsh-gui
+        run: |
+          PNPM_VERSION=$(pnpm --version)
+          echo "pnpm version: ${PNPM_VERSION}"
+          mkdir -p resources/runtime/pnpm
+          curl -fsSL -o /tmp/pnpm.tgz "https://registry.npmjs.org/pnpm/-/pnpm-${PNPM_VERSION}.tgz"
+          tar -xzf /tmp/pnpm.tgz -C /tmp
+          cp -R /tmp/package/. resources/runtime/pnpm/
+
       - name: Fetch Electron darwin-arm64 binary
         working-directory: dsh-gui
         run: |
