@@ -18,6 +18,14 @@ export interface PluginListing {
   source: 'github'
 }
 
+/** 已安装插件 + 代码侧版本比对结果（一键更新用）。 */
+export interface InstalledVersion {
+  name: string
+  current: string
+  latest: string | null
+  hasUpdate: boolean
+}
+
 /** Category buckets derived from the plugin name / topics / description. */
 const CATEGORY_KEYWORDS: Array<{ id: string; label: string; match: RegExp }> = [
   { id: 'ui', label: 'UI 增强', match: /sidebar|ui|theme|skin|panel|overlay|web-ui|interface/i },

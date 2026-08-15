@@ -10,7 +10,7 @@ import type { Translate } from './locales-types.ts'
 import { zh, en } from './locales.ts'
 import {
   filterPlugins, orderedCategories, isOfficial, SCENARIOS, scenarioPlugins,
-  type PluginEntry, type PluginListing, type Scenario,
+  type PluginEntry, type PluginListing, type Scenario, type InstalledVersion,
 } from './market-data.ts'
 
 export const name = 'dsh-discovery'
@@ -359,7 +359,34 @@ function buildCheckUpdatePrompt(plugin: PluginEntry): string {
     '请检查该插件的当前安装版本与最新版本（npm registry 或 GitHub releases）：',
     '1. 对比已安装版本与最新版本',
     '2. 如有更新，简述更新内容（changelog / releases）',
-    '3. 如适合更新，使用 dsh plugin update 更新；否则说明原因',
+    '3. 更新前必须先审查新版本的安全性（重点对比新旧版本差异，警惕供应链投毒/维护者账号被盗）：',
+    '   - 依赖变更：新增了哪些依赖？来源是否可信？有无依赖投毒风险？',
+    '   - 代码变更：是否新增网络请求、文件读写、环境变量/密钥访问、命令执行等敏感行为？',
+    '   - 权限变化：是否要求额外权限或修改配置？',
+    '4. 审查通过后才使用 dsh plugin update 更新；若发现任何风险，列出风险点并停止更新',
+  ].join('\n')
+}
+
+/**
+ * 一键更新 prompt：版本比对已由代码完成（确定性操作），清单是「哪些插件有更新 + 新旧版本」，
+ * LLM 只负责对每个候选做安全审查（依赖/代码/权限变更）与安装执行。
+ */
+function buildBulkUpdatePrompt(updates: InstalledVersion[], t: Translate): string {
+  const lines = updates.map((p) => `- ${p.name}：当前 ${p.current} → 最新 ${p.latest ?? '?'}`)
+  return [
+    '以下已安装插件有可用更新（版本已由插件搜索插件代码比对完成，最新版来源 npm registry）：',
+    '',
+    ...lines,
+    '',
+    '请逐个更新，但更新前必须先安全审查每个插件的新版本（重点对比新旧版本差异，警惕供应链投毒/维护者账号被盗）：',
+    '1. 依赖变更：新增了哪些依赖？来源是否可信？有无投毒风险？',
+    '2. 代码变更：是否新增网络请求、文件读写、环境变量/密钥访问、命令执行等敏感行为？',
+    '3. 权限变化：是否要求额外权限或修改配置？',
+    '',
+    '审查通过后才使用 dsh plugin update 更新该插件；若发现任何风险，列出风险点并停止更新该插件。',
+    '完成后简述：更新了哪些、跳过了哪些及原因。',
+    '',
+    t('networkNote'),
   ].join('\n')
 }
 
@@ -517,7 +544,7 @@ function RepoPreview({ plugin, t, onClose }: { plugin: PluginEntry; t: Translate
         h(PluginIcon, { size: 15 }),
         h('span', { style: { flex: 1 } }, `${plugin.owner}/${plugin.name}`),
         h('a', { href: plugin.htmlUrl, target: '_blank', rel: 'noreferrer', className: 'dshd-btn', style: repoBtnStyle, title: t('openOnGitHub') }, t('openOnGitHub')),
-        h('button', { className: 'dshd-btn', style: closeStyle, onClick: onClose, 'aria-label': 'Close', title: 'Close' }, '✕'),
+        h('button', { className: 'dshd-btn', style: closeStyle, onClick: onClose, 'aria-label': '关闭', title: '关闭' }, '✕'),
       ),
       state === 'loading' && h('div', { style: loadingStyle }, t('readmeLoading')),
       state === 'error' && h('div', { style: emptyStyle }, t('readmeFail')),
@@ -560,10 +587,11 @@ function DiscoveryBrowser({ t, ctx, onClose, onFetched }: {
   onClose: () => void
   onFetched: (at: string) => void
 }) {
-  const [tab, setTab] = useState<'browse' | 'scenario'>('browse')
+  const [tab, setTab] = useState<'browse' | 'scenario' | 'installed'>('browse')
   const [listing, setListing] = useState<PluginListing | null>(null)
   const [loadError, setLoadError] = useState(false)
   const [installed, setInstalled] = useState<string[]>([])
+  const [installedVersions, setInstalledVersions] = useState<InstalledVersion[] | null>(null)
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('all')
   const [preview, setPreview] = useState<PluginEntry | null>(null)
@@ -593,6 +621,13 @@ function DiscoveryBrowser({ t, ctx, onClose, onFetched }: {
       .then((body: { installed: string[] }) => setInstalled(body.installed ?? []))
       .catch(() => setInstalled([]))
   }, [])
+  // 已安装插件版本比对（代码侧：读当前版本 + 查 npm 最新版）
+  useEffect(() => {
+    fetch('/dsh-discovery/installed-versions', { cache: 'no-store' })
+      .then((res) => { if (!res.ok) throw new Error('HTTP ' + String(res.status)); return res.json() })
+      .then((body: { plugins: InstalledVersion[] }) => setInstalledVersions(body.plugins ?? []))
+      .catch(() => setInstalledVersions([]))
+  }, [])
 
   const cats = useMemo(() => orderedCategories(listing), [listing])
   const plugins = useMemo(() => filterPlugins(listing, { q, cat }), [listing, q, cat])
@@ -613,11 +648,18 @@ function DiscoveryBrowser({ t, ctx, onClose, onFetched }: {
     onClose()
     void openSessionAndSend(ctx, buildScenarioCustomPrompt(scenario, matched, t))
   }
+  const handleUpdateAll = (): void => {
+    const updates = (installedVersions ?? []).filter((p) => p.hasUpdate)
+    if (updates.length === 0) return
+    onClose()
+    void openSessionAndSend(ctx, buildBulkUpdatePrompt(updates, t))
+  }
 
   return h('div', { style: { height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 } },
     h('div', { style: tabRowStyle },
       h('button', { type: 'button', style: tab === 'browse' ? tabOnStyle : tabStyle, onClick: () => setTab('browse') }, t('all')),
       h('button', { type: 'button', style: tab === 'scenario' ? tabOnStyle : tabStyle, onClick: () => setTab('scenario') }, t('scenariosTab')),
+      h('button', { type: 'button', style: tab === 'installed' ? tabOnStyle : tabStyle, onClick: () => setTab('installed') }, t('installedTab')),
     ),
     tab === 'browse' && h('div', { style: { height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 } },
       h('p', { style: disclaimerStyle }, `⚠️ ${t('disclaimerBody')}`),
@@ -651,7 +693,55 @@ function DiscoveryBrowser({ t, ctx, onClose, onFetched }: {
       ),
     ),
     tab === 'scenario' && h(ScenarioPanel, { listing, t, onInstall: handleInstall, onCustom: handleCustom }),
+    tab === 'installed' && h(InstalledPanel, { t, versions: installedVersions, onUpdateAll: handleUpdateAll }),
     preview !== null && h(RepoPreview, { plugin: preview, t, onClose: () => setPreview(null) }),
+  )
+}
+
+/** 已安装 tab：顶部一键更新 + 已安装插件版本列表（代码侧比对结果）。 */
+function InstalledPanel({ t, versions, onUpdateAll }: {
+  t: Translate
+  versions: InstalledVersion[] | null
+  onUpdateAll: () => void
+}) {
+  const updatable = (versions ?? []).filter((p) => p.hasUpdate)
+  const badgeText = (p: InstalledVersion): string => p.hasUpdate
+    ? t('updateAvailable')
+    : (p.latest !== null ? t('upToDate') : t('versionUnknown'))
+  const badgeStyleOf = (p: InstalledVersion): React.CSSProperties => p.hasUpdate
+    ? { fontSize: 11, padding: '2px 8px', borderRadius: 10, background: '#fff4e5', color: '#b45309', whiteSpace: 'nowrap' }
+    : { fontSize: 11, padding: '2px 8px', borderRadius: 10, background: '#e8f7ee', color: '#1a7f37', whiteSpace: 'nowrap' }
+  return h('div', { style: { height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 } },
+    h('div', { style: { padding: '12px 14px', borderBottom: '1px solid var(--dsw-alias-divider, #ececf2)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' } },
+      h('button', {
+        type: 'button',
+        style: {
+          ...btnStyle,
+          background: '#4176e6',
+          borderColor: '#4176e6',
+          color: '#fff',
+          opacity: updatable.length === 0 ? 0.5 : 1,
+          cursor: updatable.length === 0 ? 'default' : 'pointer',
+        },
+        onClick: onUpdateAll,
+        disabled: updatable.length === 0,
+      }, `${t('updateAll')}${updatable.length > 0 ? ` (${updatable.length})` : ''}`),
+      h('span', { style: { fontSize: 11, color: 'var(--dsw-alias-label-secondary, #7c7c9c)' } }, t('updateAllNote')),
+    ),
+    h('div', { style: { flex: 1, overflowY: 'auto', padding: 8 } },
+      versions === null && h('div', { style: loadingStyle }, t('updateLoading')),
+      versions !== null && versions.length === 0 && h('div', { style: emptyStyle }, t('noInstalled')),
+      versions !== null && versions.length > 0 && updatable.length === 0 && h('div', { style: emptyStyle }, t('updateEmpty')),
+      versions !== null && versions.map((p) => h('div', { key: p.name, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, border: '1px solid var(--dsw-alias-border, #e6e6ee)', marginBottom: 6 } },
+        h('div', { style: { flex: 1, minWidth: 0 } },
+          h('div', { style: { fontSize: 13, fontWeight: 600, color: '#1f2328', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, p.name),
+          h('div', { style: { fontSize: 11, color: 'var(--dsw-alias-label-secondary, #7c7c9c)', marginTop: 2 } },
+            `${t('currentVersion')} ${p.current}` + (p.latest !== null ? ` → ${t('latestVersion')} ${p.latest}` : ''),
+          ),
+        ),
+        h('span', { style: badgeStyleOf(p) }, badgeText(p)),
+      )),
+    ),
   )
 }
 
@@ -706,7 +796,7 @@ function DiscoveryTrigger({ wide, t, ctx }: { wide: boolean; t: Translate; ctx: 
           h('span', null, t('nav')),
           h('span', { style: { fontSize: 11, color: 'var(--dsw-alias-label-secondary, #7c7c9c)', fontWeight: 400 } }, t('subtitle')),
           fetchedAt !== '' && h('span', { style: { fontSize: 11, color: 'var(--dsw-alias-label-tertiary, #9aa0b4)', fontWeight: 400 } }, `${t('lastRefresh')} ${formatTime(fetchedAt)}`),
-          h('button', { ref: closeButton, style: closeStyle, onClick: close, 'aria-label': 'Close' }, '✕'),
+          h('button', { ref: closeButton, style: closeStyle, onClick: close, 'aria-label': '关闭' }, '✕ 关闭'),
         ),
         h('div', { style: { flex: 1, overflowY: 'hidden', padding: '0 4px' } }, h(DiscoveryBrowser, { t, ctx, onClose: close, onFetched: setFetchedAt })),
       ),
