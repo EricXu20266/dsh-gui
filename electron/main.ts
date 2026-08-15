@@ -15,7 +15,7 @@
  * 启动时检测未安装则打开「安装向导」窗口（下载源选择 → 下载进度 → 校验），
  * 完成后自动继续启动主界面。
  */
-import { app, BrowserWindow, shell, ipcMain } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage } from 'electron'
 import { spawn, execFileSync, type ChildProcess } from 'node:child_process'
 import net from 'node:net'
 import { existsSync } from 'node:fs'
@@ -51,6 +51,42 @@ const DHS_HOME = process.env.DSH_HOME ?? '' // 让 host 子进程继承当前 DS
 let hostProc: ChildProcess | undefined
 let wizardWin: BrowserWindow | null = null
 let mainWin: BrowserWindow | null = null
+let tray: Tray | null = null
+/** 用户主动退出标志（托盘「退出」时置位，放行 close 真正退出） */
+let isQuitting = false
+
+/** 应用图标路径（开发态=项目根 resources/icon，打包态=asar 内 resources/icon） */
+function iconPath(name: string): string {
+  return join(app.getAppPath(), 'resources', 'icon', name)
+}
+
+/** 创建系统托盘：左键/双击显示主窗口，右键菜单（显示主窗口/退出） */
+function createTray(): void {
+  if (tray !== null) return
+  tray = new Tray(nativeImage.createFromPath(iconPath('tray-32.png')))
+  tray.setToolTip('dsh-gui — DeepSeek Harness 桌面客户端')
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: '显示主窗口', click: () => showMainWindow() },
+      { type: 'separator' },
+      { label: '退出', click: () => quitApp() },
+    ]),
+  )
+  tray.on('click', () => showMainWindow())
+}
+
+/** 显示并聚焦主窗口 */
+function showMainWindow(): void {
+  if (mainWin === null) return
+  mainWin.show()
+  mainWin.focus()
+}
+
+/** 主动退出：置位退出标志后走正常退出流程（before-quit 会 kill host） */
+function quitApp(): void {
+  isQuitting = true
+  app.quit()
+}
 
 /** DHS 依赖是否已安装（捆绑版首次安装后 node_modules 就位） */
 function isDhsInstalled(): boolean {
@@ -193,7 +229,7 @@ async function startHost(): Promise<number> {
   return port
 }
 
-/** 启动主界面（host + BrowserWindow） */
+/** 启动主界面（host + BrowserWindow + 系统托盘） */
 async function launchMain(): Promise<void> {
   try {
     const port = await startHost()
@@ -201,10 +237,19 @@ async function launchMain(): Promise<void> {
       width: 1440,
       height: 900,
       title: 'DHS GUI',
+      icon: iconPath('icon-256.png'),
       webPreferences: {
         contextIsolation: true,
         nodeIntegration: false,
       },
+    })
+    // 关闭按钮（右上角 X）→ 最小化到系统托盘；真正退出走托盘「退出」
+    mainWin.on('close', (e) => {
+      if (!isQuitting) {
+        e.preventDefault()
+        mainWin?.hide()
+        console.log('[dsh-gui] window hidden to tray')
+      }
     })
     // 外部链接（target=_blank / window.open）一律走系统默认浏览器，不在应用内开新窗口
     mainWin.webContents.setWindowOpenHandler(({ url }) => {
@@ -217,10 +262,11 @@ async function launchMain(): Promise<void> {
     mainWin.webContents.on('render-process-gone', (_e, details) => {
       console.error(`[dsh-gui] renderer gone: reason=${details.reason} exitCode=${details.exitCode}`)
     })
-    mainWin.on('close', () => console.log('[dsh-gui] window close event'))
     mainWin.on('closed', () => console.log('[dsh-gui] window closed event'))
     await mainWin.loadURL(`http://127.0.0.1:${port}`)
     console.log('[dsh-gui] window loaded')
+    // 系统托盘（应用启动即常驻，关闭窗口不退出）
+    createTray()
   } catch (error) {
     console.error('[dsh-gui] start failed:', error)
     app.quit()

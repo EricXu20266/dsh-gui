@@ -22,7 +22,8 @@
       "output": "release"
     },
     "files": [
-      "dist/**/*"
+      "dist/**/*",
+      "resources/icon/**"
     ],
     "extraResources": [
       {
@@ -55,7 +56,8 @@
       }
     ],
     "win": {
-      "signAndEditExecutable": false,
+      "signExecutable": false,
+      "icon": "resources/icon/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -77,6 +79,8 @@
     "electron": "^43.4.0",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
+    "png-to-ico": "^3.0.2",
+    "sharp": "^0.35.3",
     "tsx": "^4.23.12"
   }
 }
