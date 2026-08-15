@@ -1,0 +1,21 @@
+{
+  "name": "dhs-gui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DHS (DeepSeek Harness) Electron GUI client — webui → gui, in-process host, kernel untouched",
+  "type": "module",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "node scripts/build-main.mjs",
+    "start": "electron .",
+    "dev": "node scripts/build-main.mjs && electron ."
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-app-boot": "workspace:^",
+    "@deepseek-ai/dsh-host-apiproxy": "workspace:^",
+    "@deepseek-ai/dsh-web-app": "workspace:^",
+    "electron": "^43.4.0",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.12"
+  }
+}

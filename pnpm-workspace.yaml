@@ -1,0 +1,51 @@
+# dhs-gui workspace —— 把 deepseek-harness 整个并进来作为 workspace 成员
+# 注意：嵌套 workspace 不生效，必须把 DHS 的所有 packages glob 在此展开
+packages:
+  - "."
+  - "../deepseek-harness"
+  - "../deepseek-harness/vendor/*"
+  - "../deepseek-harness/packages/*/*"
+  - "../deepseek-harness/native/landlock-run"
+  - "../deepseek-harness/native/landlock-run/packages/*"
+  - "../deepseek-harness/apps/*"
+  - "../deepseek-harness/website"
+  - "../deepseek-harness/examples"
+  - "../deepseek-harness/python/sdk-runtime"
+
+linkWorkspacePackages: true
+
+# 复制自 deepseek-harness/pnpm-workspace.yaml（link: 路径按 workspace 根 dhs-gui 解析，需指回 DHS 仓库）
+overrides:
+  '@deepseek-ai/cosmokit': 'link:../deepseek-harness/vendor/cosmokit'
+  '@deepseek-ai/schemastery': 'link:../deepseek-harness/vendor/schemastery'
+
+peerDependencyRules:
+  allowedVersions:
+    typescript: '>=5 <7'
+
+# 原生模块构建脚本白名单（pnpm 10+ strictDepBuilds 默认拒绝一切 install/build 脚本）
+allowBuilds:
+  esbuild: true
+  lefthook: true
+  node-pty: true
+  electron: true
+  '@google/genai': false
+  protobufjs: false
+  node-addon-require-builtin: false
+  koffi: true
+  '@deepseek-ai/dsh-subprocess-local@file:../deepseek-harness/packages/subprocess/subprocess-local': true
+
+minimumReleaseAgeExclude:
+  - '@earendil-works/pi-ai@0.82.1'
+  - node-addon-native-custom-loader@0.1.4
+  - node-addon-require-builtin-darwin-arm64@0.1.4
+  - node-addon-require-builtin-darwin-x64@0.1.4
+  - node-addon-require-builtin-linux-arm64-gnu@0.1.4
+  - node-addon-require-builtin-linux-x64-gnu@0.1.4
+  - node-addon-require-builtin-win32-arm64-msvc@0.1.4
+  - node-addon-require-builtin-win32-ia32-msvc@0.1.4
+  - node-addon-require-builtin-win32-x64-msvc@0.1.4
+  - node-addon-require-builtin@0.1.4
+
+patchedDependencies:
+  node-pty@1.1.0: ../deepseek-harness/patches/node-pty@1.1.0.patch

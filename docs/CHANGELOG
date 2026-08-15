@@ -1,0 +1,9 @@
+# CHANGELOG
+
+## [0.1.0] - 2026-08-15
+
+### Added
+- P0 完成：Electron 窗口承载 DHS web UI（webui→gui）
+- DHS host 子进程方案（系统 Node 24，内核零改动）
+- 对话链路全通（prompt → DeepSeek API → 回复渲染）
+- 项目基础设施：docs 体系、L2 宪法、workspace 配置

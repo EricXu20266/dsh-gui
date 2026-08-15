@@ -1,0 +1,34 @@
+# ── Node / Electron ──
+node_modules/
+dist/
+out/
+*.tsbuildinfo
+
+# ── DHS host 集成（运行时生成）──
+tmp/
+logs/
+*.log
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ── 环境 ──
+.env
+.env.*
+!.env.example
+
+# ── AI 运行时数据 ──
+.taishen/
+
+# ── 打包产物 ──
+release/
+install/*.exe
+install/*.msi
