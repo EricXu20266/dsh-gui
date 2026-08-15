@@ -137,48 +137,73 @@ export interface Scenario {
   id: string
   /** Locale key suffix — resolved as `scenario_<id>` / `scenario_<id>_desc`. */
   id2: string
+  /** 功能关键词：每个词代表一个功能簇。重复筛选时，每个功能簇只保留 star 前 MAX_PER_FUNCTION 个。 */
+  keywords: string[]
   /** Plugin match rule (name + description + topics haystack). */
   match: RegExp
 }
+
+/** 每个功能簇最多保留的插件数（重复筛选上限）。 */
+export const MAX_PER_FUNCTION = 3
 
 /** Curated user scenarios that map onto community plugin clusters. */
 export const SCENARIOS: Scenario[] = [
   {
     id: 'writing',
     id2: 'writing',
+    keywords: ['write', 'note', 'memory', 'template', 'blog', 'doc', 'content', 'skill', 'memo', 'recall', 'remember'],
     match: /write|writing|note|memo|skill|memory|template|blog|content|doc|recall|remember/i,
   },
   {
     id: 'dev',
     id2: 'dev',
+    keywords: ['terminal', 'git', 'docker', 'code', 'debug', 'runtime', 'sandbox', 'browser', 'cli', 'tui', 'shell', 'dev'],
     match: /terminal|tui|shell|cli|git|docker|code|dev|debug|runtime|sandbox|browser/i,
   },
   {
     id: 'model',
     id2: 'model',
+    keywords: ['model', 'llm', 'provider', 'gateway', 'inference', 'api', 'openai', 'anthropic', 'gemini', 'claude'],
     match: /model|provider|llm|api|gateway|inference|openai|anthropic|gemini|claude/i,
   },
   {
     id: 'automation',
     id2: 'automation',
+    keywords: ['tool', 'workflow', 'schedule', 'task', 'agent', 'pipeline', 'command', 'todo', 'job', 'automation'],
     match: /tool|command|automation|workflow|schedule|task|todo|job|agent|pipeline/i,
   },
   {
     id: 'notify',
     id2: 'notify',
+    keywords: ['notify', 'webhook', 'slack', 'wechat', 'telegram', 'email', 'push', 'notification', 'feishu', 'dingtalk', 'im'],
     match: /notify|notification|webhook|slack|wechat|feishu|telegram|dingtalk|email|im|push/i,
   },
 ]
 
 /**
- * Plugins matching a scenario, sorted by stars then recency (the batch
- * install prompt feeds this list to DHS for self-judged selection).
+ * Plugins matching a scenario with duplicate filtering: each functional
+ * keyword cluster keeps only the top {@link MAX_PER_FUNCTION} by stars
+ * (then recency), so a scenario with many similar plugins stays lean.
  */
 export function scenarioPlugins(listing: PluginListing | null, scenario: Scenario): PluginEntry[] {
-  return (listing?.plugins ?? [])
-    .filter((p) => {
-      const hay = `${p.name} ${p.description} ${p.topics.join(' ')}`
-      return scenario.match.test(hay)
-    })
-    .sort((a, b) => b.stars - a.stars || b.updatedAt.localeCompare(a.updatedAt))
+  const matched = (listing?.plugins ?? []).filter((p) => {
+    const hay = `${p.name} ${p.description} ${p.topics.join(' ')}`
+    return scenario.match.test(hay)
+  })
+  // 按功能关键词分组：插件归入第一个命中的关键词簇（未命中任何关键词的归入 other）
+  const byKeyword = new Map<string, PluginEntry[]>()
+  for (const plugin of matched) {
+    const hay = `${plugin.name} ${plugin.description} ${plugin.topics.join(' ')}`.toLowerCase()
+    const keyword = scenario.keywords.find((k) => hay.includes(k)) ?? 'other'
+    const group = byKeyword.get(keyword)
+    if (group === undefined) byKeyword.set(keyword, [plugin])
+    else group.push(plugin)
+  }
+  // 每个功能簇取 star 前 MAX_PER_FUNCTION，合并去重后整体按 star 排序
+  const picked = new Map<string, PluginEntry>()
+  for (const group of byKeyword.values()) {
+    group.sort((a, b) => b.stars - a.stars || b.updatedAt.localeCompare(a.updatedAt))
+    for (const plugin of group.slice(0, MAX_PER_FUNCTION)) picked.set(plugin.htmlUrl, plugin)
+  }
+  return [...picked.values()].sort((a, b) => b.stars - a.stars || b.updatedAt.localeCompare(a.updatedAt))
 }
