@@ -15,10 +15,26 @@ DHS 官方以 web ui（浏览器）形态交付。dsh-gui 用 Electron 承载同
 - **原生桌面体验**：独立窗口、系统托盘（X 最小化到托盘、托盘右键退出）、DeepSeek 蓝鲸鱼图标
 - **首次安装向导**：5 步流程（欢迎 → 下载源选择 → 下载进度 → 检查 → 完成），国内源/原生源/系统代理可选，全程进度真实显示
 - **捆绑分发**：打包版捆绑 Node + pnpm + DHS 源码，首次启动自动装依赖（可选国内源加速），免手动配置环境
-- **内置插件市场**：捆绑 dsh-discovery 插件，首次安装自动注册，开箱即用
+- **内置插件搜索系统**：捆绑 dsh-discovery（一个 DSH 插件，独立开源仓库），首次安装自动注册，开箱即用——详见下方章节
 - **中英双语**：界面语言跟随系统，可手动切换，并映射到 DHS 内核 `locale.preference`（内核 UI 跟随）
 - **安装日志**：安装全过程落盘 `%APPDATA%/dsh-gui/install.log`，失败可追溯
 - **零内核改动**：DHS 内核保持官方原样，GUI 只做壳
+
+## 内置插件搜索系统（dsh-discovery）
+
+dsh-gui 内置了一个**插件搜索系统**——它本身就是一个 DSH 插件，来自独立开源仓库 [EricXu20266/dsh-discovery](https://github.com/EricXu20266/dsh-discovery)，随打包版捆绑并在首次安装时自动注册到 DHS profile。
+
+定位是**社区插件的发现与审计工具**：DHS 目前没有官方插件市场，第三方插件本质上是可执行代码，因此它刻意做成只读——只负责「发现 → 筛选 → 审查」，安装永远由你在预览仓库后自行执行 `dsh plugin add`。
+
+能力概览：
+
+- **浏览**：拉取 GitHub `dsh-plugin` 社区话题下的全部插件仓库（有界分页 + 超时降级）
+- **分类**：7 类功能分类 + 其他（UI 增强 / 终端 / 工具 / 记忆 / 模型 / 通知 / 开发）
+- **场景**：5 个使用场景（写作 / 开发 / 模型接入 / 自动化 / 通知集成），自动去重限量推荐
+- **搜索**：38 词中英同义词表，中文关键词也能命中英文插件数据
+- **审计**：内置 Markdown 渲染器预览仓库 README、官方（deepseek-ai）vs 社区标记、已安装标识、检查更新
+
+完整的设计说明（安全模型、拉取规则、场景化筛选规则）见该仓库的 [README](https://github.com/EricXu20266/dsh-discovery)。
 
 ## 架构
 
@@ -70,7 +86,7 @@ node scripts/apply-exe-icon.mjs   # electron-builder 26 的 exe 图标编辑有�
 ```
 dsh-gui/
 ├── electron/        # GUI 壳引擎（main/preload/renderer/安装向导）
-├── plugins/         # 内置插件（dsh-discovery 插件市场）
+├── plugins/         # 内置插件（dsh-discovery 插件搜索系统）
 ├── platform/        # 平台适配（windows 打包 / macos 预留）
 ├── resources/       # 资源（图标、打包运行时）
 ├── install/         # 安装器配置
