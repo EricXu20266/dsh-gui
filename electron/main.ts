@@ -165,6 +165,43 @@ function getSystemProxy(): string {
   }
 }
 
+/** 补协议前缀（注册表 ProxyServer 形如 `127.0.0.1:7897`，env 需要 `http://`） */
+function normalizeProxyUrl(raw: string): string {
+  const v = raw.trim()
+  if (v === '') return ''
+  return /^https?:\/\//i.test(v) ? v : `http://${v}`
+}
+
+/**
+ * 读取 ~/.dsh/settings.yaml 的 proxy 节 → host 代理环境变量。
+ * DHS 全链路（LLM / 搜索 / MCP client）走 Node 全局 fetch，Node 24 由
+ * NODE_USE_ENV_PROXY 启用环境变量代理；本地回环与 DeepSeek API 直连。
+ * 显式环境变量（HTTP_PROXY 等）已设置时尊重外部配置，不覆盖。
+ */
+function resolveHostProxyEnv(): Record<string, string> {
+  if (process.env.HTTP_PROXY !== undefined || process.env.HTTPS_PROXY !== undefined) return {}
+  const settingsPath = join(homedir(), '.dsh', 'settings.yaml')
+  if (!existsSync(settingsPath)) return {}
+  let doc: Record<string, unknown>
+  try {
+    doc = (yamlLoad(readFileSync(settingsPath, 'utf8')) as Record<string, unknown>) ?? {}
+  } catch {
+    return {}
+  }
+  const proxy = (doc.proxy ?? {}) as Record<string, unknown>
+  if (proxy.enabled !== true) return {}
+  let url = ''
+  if (proxy.mode === 'manual' && typeof proxy.url === 'string') url = normalizeProxyUrl(proxy.url)
+  else url = normalizeProxyUrl(getSystemProxy())
+  if (url === '') return {}
+  return {
+    NODE_USE_ENV_PROXY: '1',
+    HTTP_PROXY: url,
+    HTTPS_PROXY: url,
+    NO_PROXY: 'localhost,127.0.0.1',
+  }
+}
+
 /** 把语言偏好写入 DHS host 配置（~/.dsh/settings.yaml 的 locale.preference），host 启动即生效 */
 function writeLocalePreference(locale: 'zh' | 'en'): void {
   const settingsPath = join(homedir(), '.dsh', 'settings.yaml')
@@ -356,10 +393,15 @@ function waitForPort(port: number, timeoutMs = 30000): Promise<void> {
 
 /** 启动 DHS host 子进程，返回其监听端口 */
 async function startHost(): Promise<number> {
+  const proxyEnv = resolveHostProxyEnv()
+  if (Object.keys(proxyEnv).length > 0) {
+    console.log(`[dsh-gui] host proxy: ${proxyEnv.HTTP_PROXY} (NODE_USE_ENV_PROXY=1)`)
+  }
   hostProc = spawn(resolveNodeBin(), ['apps/cli/lib/bin.js', '--profile', 'web'], {
     cwd: DHS_ROOT,
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, ...proxyEnv },
   })
   hostProc.stdout?.on('data', (d) => process.stdout.write(`[host] ${d}`))
   hostProc.stderr?.on('data', (d) => process.stderr.write(`[host:err] ${d}`))
