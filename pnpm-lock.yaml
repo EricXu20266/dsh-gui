@@ -34,6 +34,9 @@ importers:
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
+      js-yaml:
+        specifier: ^5.3.0
+        version: 5.3.0
       png-to-ico:
         specifier: ^3.0.2
         version: 3.0.2
@@ -13267,6 +13270,10 @@ packages:
     resolution: {integrity: sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ==}
     hasBin: true
 
+  js-yaml@5.3.0:
+    resolution: {integrity: sha512-muutsYr+e2+d3rTgUGslq5rxbBlUy3cJ61IsHag2QNDQV+7zXWjkUpmALIajhrlLlrgRUiymj6U3zUr/TMK84Q==}
+    hasBin: true
+
   jscpd-darwin-arm64@5.0.15:
     resolution: {integrity: sha512-7UIRxKkvqN7bVIl2nXYsTOs7a2M6Y1Ll58KehquQbI6gUC3I7AAd/vz2HNWIdo+f5lJB0tiN1E9B/i6CUM4WHQ==}
     cpu: [arm64]
@@ -19479,6 +19486,10 @@ snapshots:
   js-tokens@4.0.0: {}
 
   js-yaml@4.3.1:
+    dependencies:
+      argparse: 2.0.1
+
+  js-yaml@5.3.0:
     dependencies:
       argparse: 2.0.1
 

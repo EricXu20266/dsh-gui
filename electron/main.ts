@@ -18,8 +18,10 @@
 import { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage } from 'electron'
 import { spawn, execFileSync, type ChildProcess } from 'node:child_process'
 import net from 'node:net'
-import { existsSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { load as yamlLoad, dump as yamlDump } from 'js-yaml'
 
 /**
  * DHS 仓库根解析：
@@ -137,6 +139,25 @@ function getSystemProxy(): string {
   }
 }
 
+/** 把语言偏好写入 DHS host 配置（~/.dsh/settings.yaml 的 locale.preference），host 启动即生效 */
+function writeLocalePreference(locale: 'zh' | 'en'): void {
+  const settingsPath = join(homedir(), '.dsh', 'settings.yaml')
+  let doc: Record<string, unknown> = {}
+  if (existsSync(settingsPath)) {
+    try {
+      doc = (yamlLoad(readFileSync(settingsPath, 'utf8')) as Record<string, unknown>) ?? {}
+    } catch {
+      doc = {}
+    }
+  } else {
+    mkdirSync(join(homedir(), '.dsh'), { recursive: true })
+  }
+  const cur = (typeof doc.locale === 'object' && doc.locale !== null ? doc.locale : {}) as Record<string, unknown>
+  doc.locale = { ...cur, preference: locale }
+  writeFileSync(settingsPath, yamlDump(doc, { lineWidth: -1 }))
+  console.log(`[dsh-gui] DHS locale preference set: ${locale}`)
+}
+
 /** 解析 pnpm --reporter=ndjson 事件 → 进度回调 */
 function parsePnpmEvent(evt: Record<string, unknown>, onProgress: ProgressCb): void {
   const s = evt.stage
@@ -156,9 +177,12 @@ function parsePnpmEvent(evt: Record<string, unknown>, onProgress: ProgressCb): v
 }
 
 /** 首次安装 DHS 依赖：按下载源配置 → bootstrap pnpm → pnpm install（ndjson 推进度） */
-async function installDhsDeps(config: { registry: string; proxy: string; useSystemProxy: boolean }, onProgress: ProgressCb): Promise<void> {
+async function installDhsDeps(config: { registry: string; proxy: string; useSystemProxy: boolean; locale?: 'zh' | 'en' }, onProgress: ProgressCb): Promise<void> {
   const nodeBin = resolveNodeBin()
   const pnpmCli = resolvePnpmCli()
+
+  // 语言偏好先写入 DHS host 配置（settings.yaml），host 启动后整个内核 UI 跟随
+  if (config.locale !== undefined) writeLocalePreference(config.locale)
 
   const env: Record<string, string> = {}
   env.npm_config_registry = config.registry
@@ -304,9 +328,11 @@ function openSetupWizard(): void {
 ipcMain.handle('setup:info', () => ({
   dhsRoot: DHS_ROOT,
   estimatedMb: 220,
+  // 默认语言跟随系统（Electron locale：zh* → 中文，其余 → 英文）
+  defaultLocale: app.getLocale().toLowerCase().startsWith('zh') ? 'zh' : 'en',
 }))
 
-ipcMain.handle('setup:install', async (_e, config: { registry: string; proxy: string; useSystemProxy: boolean }) => {
+ipcMain.handle('setup:install', async (_e, config: { registry: string; proxy: string; useSystemProxy: boolean; locale?: 'zh' | 'en' }) => {
   try {
     await installDhsDeps(config, (p) => wizardWin?.webContents.send('setup:progress', p))
     return { ok: true }

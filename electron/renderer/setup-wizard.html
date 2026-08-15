@@ -2,11 +2,14 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>dsh-gui 首次启动安装</title>
+<title>dsh-gui Setup</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: "Microsoft YaHei", "Segoe UI", sans-serif; background: #f5f7fa; color: #1f2328; user-select: none; }
   .wizard { max-width: 560px; margin: 0 auto; padding: 28px 32px; }
+  .topbar { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+  #langToggle { border: 1px solid #d0d7de; background: #fff; border-radius: 6px; padding: 4px 14px; font-size: 12px; cursor: pointer; color: #1f2328; }
+  #langToggle:hover { background: #f0f6ff; border-color: #4f8cff; }
   .steps { display: flex; justify-content: space-between; margin-bottom: 28px; }
   .step-dot { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; position: relative; }
   .step-dot::before { content: ""; position: absolute; top: 13px; left: -50%; width: 100%; height: 2px; background: #d0d7de; }
@@ -60,63 +63,64 @@
 </head>
 <body>
 <div class="wizard">
+  <div class="topbar"><button id="langToggle">EN</button></div>
   <div class="steps" id="steps">
-    <div class="step-dot active" data-step="1"><span class="num">1</span><span class="lbl">说明</span></div>
-    <div class="step-dot" data-step="2"><span class="num">2</span><span class="lbl">下载源</span></div>
-    <div class="step-dot" data-step="3"><span class="num">3</span><span class="lbl">下载</span></div>
-    <div class="step-dot" data-step="4"><span class="num">4</span><span class="lbl">检查</span></div>
-    <div class="step-dot" data-step="5"><span class="num">5</span><span class="lbl">完成</span></div>
+    <div class="step-dot active" data-step="1"><span class="num">1</span><span class="lbl" data-i18n="stepWelcome"></span></div>
+    <div class="step-dot" data-step="2"><span class="num">2</span><span class="lbl" data-i18n="stepSource"></span></div>
+    <div class="step-dot" data-step="3"><span class="num">3</span><span class="lbl" data-i18n="stepDownload"></span></div>
+    <div class="step-dot" data-step="4"><span class="num">4</span><span class="lbl" data-i18n="stepVerify"></span></div>
+    <div class="step-dot" data-step="5"><span class="num">5</span><span class="lbl" data-i18n="stepDone"></span></div>
   </div>
 
   <div class="card">
     <!-- 1 欢迎 -->
     <div class="step" id="step1">
-      <div class="title-main"><h1>欢迎使用 dsh-gui</h1><p>首次启动需要安装 DeepSeek Harness 依赖</p></div>
-      <div class="info-row"><span class="k">预计下载大小</span><span class="v" id="estSize">--</span></div>
-      <div class="info-row"><span class="k">安装位置</span><span class="v" id="installDir">--</span></div>
-      <div class="info-row"><span class="k">依赖组件</span><span class="v">DHS 内核 + Node 运行时</span></div>
-      <div class="warn">安装过程需要联网下载依赖包。请确保磁盘空间充足、网络畅通。</div>
+      <div class="title-main"><h1 data-i18n="welcomeTitle"></h1><p data-i18n="welcomeSub"></p></div>
+      <div class="info-row"><span class="k" data-i18n="estSize"></span><span class="v" id="estSize">--</span></div>
+      <div class="info-row"><span class="k" data-i18n="installDir"></span><span class="v" id="installDir">--</span></div>
+      <div class="info-row"><span class="k" data-i18n="components"></span><span class="v" data-i18n="componentsVal"></span></div>
+      <div class="warn" data-i18n="welcomeWarn"></div>
     </div>
 
     <!-- 2 下载源 -->
     <div class="step" id="step2" style="display:none">
-      <h2>选择下载源</h2>
-      <div class="desc">选择依赖包的下载来源。国内网络建议使用国内镜像源，速度更快。</div>
+      <h2 data-i18n="sourceTitle"></h2>
+      <div class="desc" data-i18n="sourceDesc"></div>
       <div class="radio-item sel" data-src="npmmirror">
         <input type="radio" name="src" value="npmmirror" checked>
-        <div><div class="t">国内镜像源（npmmirror）</div><div class="s">阿里云 npm 镜像，国内速度最快</div></div>
+        <div><div class="t" data-i18n="srcCn"></div><div class="s" data-i18n="srcCnDesc"></div></div>
       </div>
       <div class="radio-item" data-src="npmjs">
         <input type="radio" name="src" value="npmjs">
-        <div><div class="t">原生源（npmjs.org）</div><div class="s">官方源，海外直连速度取决于网络</div></div>
+        <div><div class="t" data-i18n="srcNative"></div><div class="s" data-i18n="srcNativeDesc"></div></div>
       </div>
       <div class="radio-item" data-src="proxy">
         <input type="radio" name="src" value="proxy">
-        <div><div class="t">原生源 + 代理</div><div class="s">通过代理访问原生源</div></div>
+        <div><div class="t" data-i18n="srcProxy"></div><div class="s" data-i18n="srcProxyDesc"></div></div>
       </div>
       <div class="proxy-box" id="proxyBox">
-        <label><input type="checkbox" id="useSystemProxy"> 使用操作系统代理</label>
-        <input type="text" id="proxyInput" placeholder="代理地址，如 http://127.0.0.1:7890">
+        <label><input type="checkbox" id="useSystemProxy"> <span data-i18n="useSysProxy"></span></label>
+        <input type="text" id="proxyInput" data-i18n-ph="proxyPlaceholder">
       </div>
       <div class="err" id="srcErr"></div>
     </div>
 
     <!-- 3 下载 -->
     <div class="step" id="step3" style="display:none">
-      <h2 class="center" style="text-align:center">正在下载安装依赖</h2>
+      <h2 class="center" style="text-align:center" data-i18n="dlTitle"></h2>
       <div class="bar-wrap"><div class="bar" id="bar"></div></div>
       <div class="pct" id="pct">0%</div>
-      <div class="phase" id="phase">准备中…</div>
-      <div class="warn" id="dlWarn">⚠️ 安装期间请勿关闭此窗口或关闭应用，否则安装会中断，需要重新开始。</div>
+      <div class="phase" id="phase"></div>
+      <div class="warn" id="dlWarn" data-i18n="dlWarn"></div>
     </div>
 
     <!-- 4 检查 -->
     <div class="step" id="step4" style="display:none">
-      <h2>检查安装结果</h2>
-      <div class="desc">安装完成，正在校验依赖完整性与运行环境。</div>
-      <div class="ok-item" id="ck1"><span class="mark"></span><span>依赖目录就绪（node_modules）</span></div>
-      <div class="ok-item" id="ck2"><span class="mark"></span><span>DHS 可执行文件存在（apps/cli/lib/bin.js）</span></div>
-      <div class="ok-item" id="ck3"><span class="mark"></span><span>Node 运行时可用</span></div>
+      <h2 data-i18n="verifyTitle"></h2>
+      <div class="desc" data-i18n="verifyDesc"></div>
+      <div class="ok-item" id="ck1"><span class="mark"></span><span data-i18n="ckDeps"></span></div>
+      <div class="ok-item" id="ck2"><span class="mark"></span><span data-i18n="ckBin"></span></div>
+      <div class="ok-item" id="ck3"><span class="mark"></span><span data-i18n="ckNode"></span></div>
       <div class="err" id="verifyErr"></div>
     </div>
 
@@ -124,29 +128,97 @@
     <div class="step" id="step5" style="display:none">
       <div class="center">
         <div class="done-icon">✓</div>
-        <h2>安装完成</h2>
-        <div class="desc" style="margin-bottom:4px">DHS 依赖已就绪，即将启动 dsh-gui。</div>
-        <div class="desc">后续启动无需再次安装。</div>
+        <h2 data-i18n="doneTitle"></h2>
+        <div class="desc" style="margin-bottom:4px" data-i18n="doneSub"></div>
+        <div class="desc" data-i18n="doneNext"></div>
       </div>
     </div>
   </div>
 
   <div class="nav">
-    <button class="btn" id="btnBack">上一步</button>
-    <button class="btn primary" id="btnNext">下一步</button>
+    <button class="btn" id="btnBack" data-i18n="back"></button>
+    <button class="btn primary" id="btnNext" data-i18n="next"></button>
   </div>
 </div>
 <script>
 const $ = (id) => document.getElementById(id)
-const RADIO = { npmmirror: 'https://registry.npmmirror.com', npmjs: 'https://registry.npmjs.org' }
+const I18N = {
+  zh: {
+    stepWelcome: '说明', stepSource: '下载源', stepDownload: '下载', stepVerify: '检查', stepDone: '完成',
+    welcomeTitle: '欢迎使用 dsh-gui', welcomeSub: '首次启动需要安装 DeepSeek Harness 依赖',
+    estSize: '预计下载大小', installDir: '安装位置', components: '依赖组件', componentsVal: 'DHS 内核 + Node 运行时',
+    welcomeWarn: '安装过程需要联网下载依赖包。请确保磁盘空间充足、网络畅通。',
+    sourceTitle: '选择下载源', sourceDesc: '选择依赖包的下载来源。国内网络建议使用国内镜像源，速度更快。',
+    srcCn: '国内镜像源（npmmirror）', srcCnDesc: '阿里云 npm 镜像，国内速度最快',
+    srcNative: '原生源（npmjs.org）', srcNativeDesc: '官方源，海外直连速度取决于网络',
+    srcProxy: '原生源 + 代理', srcProxyDesc: '通过代理访问原生源',
+    useSysProxy: '使用操作系统代理', proxyPlaceholder: '代理地址，如 http://127.0.0.1:7890',
+    dlTitle: '正在下载安装依赖', dlWarn: '⚠️ 安装期间请勿关闭此窗口或关闭应用，否则安装会中断，需要重新开始。',
+    verifyTitle: '检查安装结果', verifyDesc: '安装完成，正在校验依赖完整性与运行环境。',
+    ckDeps: '依赖目录就绪（node_modules）', ckBin: 'DHS 可执行文件存在（apps/cli/lib/bin.js）', ckNode: 'Node 运行时可用',
+    doneTitle: '安装完成', doneSub: 'DHS 依赖已就绪，即将启动 dsh-gui。', doneNext: '后续启动无需再次安装。',
+    back: '上一步', next: '下一步',
+    langToggle: 'EN',
+    errProxyRequired: '请填写代理地址，或勾选使用系统代理',
+    errInstall: '安装失败：{0}。请检查网络与下载源后重试。',
+    errException: '安装异常：{0}',
+    phPreparing: '准备中…', phResolve: '解析依赖关系…', phResolveDone: '依赖解析完成，开始下载…',
+    phDownload: '下载依赖包…', phImporting: '下载依赖 {0}/{1}', phImportDone: '依赖下载完成，链接包…',
+    phFinish: '安装收尾中…', phStart: '开始安装依赖…', phVerify: '校验安装结果…', phDone: '安装完成',
+  },
+  en: {
+    stepWelcome: 'Intro', stepSource: 'Source', stepDownload: 'Download', stepVerify: 'Verify', stepDone: 'Done',
+    welcomeTitle: 'Welcome to dsh-gui', welcomeSub: 'First launch requires installing DeepSeek Harness dependencies',
+    estSize: 'Estimated size', installDir: 'Install location', components: 'Components', componentsVal: 'DHS core + Node runtime',
+    welcomeWarn: 'The installation downloads dependency packages over the network. Please ensure sufficient disk space and a working internet connection.',
+    sourceTitle: 'Choose download source', sourceDesc: 'Pick where dependency packages are downloaded from. A mirror is recommended in China for speed.',
+    srcCn: 'China mirror (npmmirror)', srcCnDesc: 'Alibaba npm mirror, fastest in China',
+    srcNative: 'Official registry (npmjs.org)', srcNativeDesc: 'Official source; speed depends on your connection',
+    srcProxy: 'Official registry + proxy', srcProxyDesc: 'Access the official registry through a proxy',
+    useSysProxy: 'Use system proxy', proxyPlaceholder: 'Proxy URL, e.g. http://127.0.0.1:7890',
+    dlTitle: 'Downloading & installing dependencies', dlWarn: '⚠️ Do not close this window or the app during installation, or the install will be interrupted and must restart.',
+    verifyTitle: 'Verify installation', verifyDesc: 'Installation finished. Checking dependency integrity and runtime.',
+    ckDeps: 'Dependency directory ready (node_modules)', ckBin: 'DHS binary exists (apps/cli/lib/bin.js)', ckNode: 'Node runtime available',
+    doneTitle: 'Installation complete', doneSub: 'DHS dependencies are ready. Starting dsh-gui…', doneNext: 'No setup needed on future launches.',
+    back: 'Back', next: 'Next',
+    langToggle: '中文',
+    errProxyRequired: 'Enter a proxy URL, or check "Use system proxy"',
+    errInstall: 'Install failed: {0}. Check your network and source, then retry.',
+    errException: 'Install error: {0}',
+    phPreparing: 'Preparing…', phResolve: 'Resolving dependencies…', phResolveDone: 'Resolved. Starting download…',
+    phDownload: 'Downloading packages…', phImporting: 'Downloading {0}/{1}', phImportDone: 'Download complete. Linking packages…',
+    phFinish: 'Finalizing…', phStart: 'Starting install…', phVerify: 'Verifying…', phDone: 'Done',
+  },
+}
+
+let lang = 'zh'
 let state = { step: 1, installing: false }
+const RADIO = { npmmirror: 'https://registry.npmmirror.com', npmjs: 'https://registry.npmjs.org' }
+
+function t(key, ...args) {
+  let s = I18N[lang][key] ?? I18N.zh[key] ?? key
+  args.forEach((a, i) => { s = s.replace(`{${i}}`, a) })
+  return s
+}
+
+function applyLocale() {
+  document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n) })
+  document.querySelectorAll('[data-i18n-ph]').forEach((el) => { el.placeholder = t(el.dataset.i18nPh) })
+  $('langToggle').textContent = t('langToggle')
+  $('dlWarn').textContent = t('dlWarn')
+  $('phase').textContent = t('phPreparing')
+}
+
+$('langToggle').onclick = () => { lang = lang === 'zh' ? 'en' : 'zh'; applyLocale() }
 
 async function init() {
   try {
     const info = await window.setupAPI.getInfo()
-    $('estSize').textContent = `约 ${info.estimatedMb} MB`
+    lang = info.defaultLocale === 'en' ? 'en' : 'zh'
+    $('estSize').textContent = `${info.estimatedMb} MB`
     $('installDir').textContent = info.dhsRoot
-  } catch { $('estSize').textContent = '未知' }
+  } catch { /* keep default zh */ }
+  applyLocale()
 }
 init()
 
@@ -189,14 +261,15 @@ $('proxyInput').oninput = () => {
 
 async function startInstall() {
   const src = document.querySelector('input[name=src]:checked').value
-  const config = { registry: RADIO[src] || RADIO.npmjs, proxy: '', useSystemProxy: false }
+  const config = { registry: RADIO[src] || RADIO.npmjs, proxy: '', useSystemProxy: false, locale: lang }
   if (src === 'proxy') {
     config.useSystemProxy = $('useSystemProxy').checked
     config.proxy = $('proxyInput').value.trim()
-    if (!config.useSystemProxy && !config.proxy) { $('srcErr').textContent = '请填写代理地址，或勾选使用系统代理'; return }
+    if (!config.useSystemProxy && !config.proxy) { $('srcErr').textContent = t('errProxyRequired'); return }
   }
   state.installing = true
   go(3)
+  $('dlWarn').textContent = t('dlWarn')
   const off = window.setupAPI.onProgress((p) => {
     $('bar').style.width = p.percent + '%'
     $('pct').textContent = p.percent + '%'
@@ -208,22 +281,21 @@ async function startInstall() {
     if (res.ok) { go(4); setTimeout(runVerify, 400) }
     else {
       state.installing = false
-      $('btnNext').textContent = '下一步'
-      $('srcErr').textContent = '安装失败：' + (res.error || '未知错误') + '。请检查网络与下载源后重试。'
+      $('btnNext').textContent = t('next')
+      $('srcErr').textContent = t('errInstall', res.error || 'unknown')
       go(2)
     }
   } catch (e) {
     off()
     state.installing = false
-    $('btnNext').textContent = '下一步'
-    $('srcErr').textContent = '安装异常：' + e.message
+    $('btnNext').textContent = t('next')
+    $('srcErr').textContent = t('errException', e.message)
     go(2)
   }
 }
 
 async function runVerify() {
-  const cks = [['ck1', '依赖目录'], ['ck2', 'DHS 可执行'], ['ck3', 'Node 运行时']]
-  for (const [id] of cks) { $(id).classList.add('on'); await new Promise((r) => setTimeout(r, 500)) }
+  for (const id of ['ck1', 'ck2', 'ck3']) { $(id).classList.add('on'); await new Promise((r) => setTimeout(r, 500)) }
   await new Promise((r) => setTimeout(r, 800))
   go(5)
   setTimeout(() => window.close(), 1500)
