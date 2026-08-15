@@ -18,7 +18,7 @@
 import { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage } from 'electron'
 import { spawn, execFileSync, type ChildProcess } from 'node:child_process'
 import net from 'node:net'
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { load as yamlLoad, dump as yamlDump } from 'js-yaml'
@@ -273,6 +273,30 @@ async function installDhsDeps(config: { registry: string; proxy: string; useSyst
     if (existsSync(join(pluginDir, 'package.json'))) {
       onProgress({ stage: 'download', percent: 95, message: '安装插件市场组件…' })
       logInstall(`>>> 安装插件 dsh-discovery（${pluginDir}）`)
+
+      // 自愈：清理 profile 中失效的 dsh-discovery file: 链接。
+      // 背景：dev 环境 `dsh plugin add` 会把 file: 绝对路径写入 ~/.dsh/profiles/web/package.json，
+      // 项目改名/迁移后旧路径失效（ENOENT），plugin add 解析 profile 现有依赖时会整体失败。
+      const profileDir = join(DHS_HOME || join(homedir(), '.dsh'), 'profiles', 'web')
+      const profilePkg = join(profileDir, 'package.json')
+      if (existsSync(profilePkg)) {
+        try {
+          const doc = JSON.parse(readFileSync(profilePkg, 'utf8')) as { dependencies?: Record<string, string> }
+          const dep = doc?.dependencies?.['dsh-discovery']
+          if (typeof dep === 'string' && dep.startsWith('file:')) {
+            const target = dep.slice('file:'.length)
+            if (!existsSync(join(target, 'package.json'))) {
+              logInstall(`修复：profile 中 dsh-discovery 指向失效路径（${dep}），移除旧依赖后重装`)
+              if (doc.dependencies) delete doc.dependencies['dsh-discovery']
+              writeFileSync(profilePkg, JSON.stringify(doc, null, 2))
+              rmSync(join(profileDir, 'node_modules', 'dsh-discovery'), { recursive: true, force: true })
+            }
+          }
+        } catch (e) {
+          logInstall(`profile 失效依赖检查跳过: ${String(e)}`)
+        }
+      }
+
       try {
         await runChild(nodeBin, [
           join(DHS_ROOT, 'apps', 'cli', 'lib', 'bin.js'),
