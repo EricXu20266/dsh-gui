@@ -20,8 +20,22 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/EricXu20266/dsh-gui.git"
+    "url": "git+https://github.com/EricXu20266/dsh-discovery.git"
   },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "plugin-discovery",
+    "github"
+  ],
+  "files": [
+    "lib",
+    "client",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
@@ -35,14 +49,18 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsc -p tsconfig.client.json",
-    "bundle:client": "tsdown"
+    "build": "tsc -p tsconfig.json",
+    "bundle:client": "tsdown",
+    "prepare": "npm run build && npm run bundle:client"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@deepseek-ai/cordis": "^4.0.1"
   },
   "devDependencies": {
+    "@deepseek-ai/cordis": "workspace:^",
+    "@types/node": "^24.0.0",
     "lightningcss": "1.33.0",
-    "tsdown": "0.22.2"
+    "tsdown": "0.22.2",
+    "typescript": "^6.0.3"
   }
 }
