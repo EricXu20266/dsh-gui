@@ -196,13 +196,43 @@ async function installDhsDeps(config: { registry: string; proxy: string; useSyst
 
   // pnpm 已捆绑（打包版 resources/runtime/pnpm；开发态用系统 pnpm），直接 install
   onProgress({ stage: 'download', percent: 8, message: '开始安装依赖…' })
-  await runChild(nodeBin, [pnpmCli, 'install', '--no-frozen-lockfile', '--reporter=ndjson'], DHS_ROOT, (line) => {
-    try {
-      parsePnpmEvent(JSON.parse(line) as Record<string, unknown>, onProgress)
-    } catch {
-      // 非 JSON 行（warn 等）忽略
+  // Windows 深路径下 junction 创建可能被 Defender 实时防护随机中断（pnpm 报 done 但链接缺失），
+  // 失败自动重试（最多 3 次）并用关键链接完整性验证兜底。
+  const MAX_ATTEMPTS = 3
+  let installed = false
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS && !installed; attempt++) {
+    if (attempt > 1) {
+      onProgress({ stage: 'download', percent: 8, message: `安装中断，正在重试（${attempt}/${MAX_ATTEMPTS}）…` })
+      await new Promise((r) => setTimeout(r, 5000))
     }
-  }, env)
+    try {
+      await runChild(nodeBin, [pnpmCli, 'install', '--no-frozen-lockfile', '--reporter=ndjson'], DHS_ROOT, (line) => {
+        try {
+          parsePnpmEvent(JSON.parse(line) as Record<string, unknown>, onProgress)
+        } catch {
+          // 非 JSON 行（warn 等）忽略
+        }
+      }, env)
+      // 链接完整性验证：apps/cli 的直接依赖 commander（pnpm 隔离布局，应存在于包级 node_modules）
+      installed = existsSync(join(DHS_ROOT, 'apps', 'cli', 'node_modules', 'commander'))
+      if (!installed) console.warn('[dsh-gui] 依赖链接不完整，触发重试')
+    } catch (err) {
+      console.warn(`[dsh-gui] 依赖安装尝试 ${attempt}/${MAX_ATTEMPTS} 失败:`, err)
+    }
+  }
+  if (!installed) throw new Error('依赖安装多次失败，请检查网络后重试')
+
+  // 打包版：把内置插件 dsh-discovery 安装进 web profile（GUI 基础特色——插件市场入口）
+  if (app.isPackaged) {
+    const pluginDir = join(process.resourcesPath, 'dsh-discovery')
+    if (existsSync(join(pluginDir, 'package.json'))) {
+      onProgress({ stage: 'download', percent: 95, message: '安装插件市场组件…' })
+      await runChild(nodeBin, [
+        join(DHS_ROOT, 'apps', 'cli', 'lib', 'bin.js'),
+        'plugin', '--profile', 'web', 'add', pluginDir,
+      ], DHS_ROOT, undefined, env)
+    }
+  }
 
   // 校验
   onProgress({ stage: 'verify', percent: 96, message: '校验安装结果…' })

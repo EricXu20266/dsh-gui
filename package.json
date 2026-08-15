@@ -54,6 +54,15 @@
           "!**/tmp/**",
           "!**/*.log"
         ]
+      },
+      {
+        "from": "plugins/dsh-discovery",
+        "to": "dsh-discovery",
+        "filter": [
+          "**/*",
+          "!**/node_modules/**",
+          "!**/*.tsbuildinfo"
+        ]
       }
     ],
     "win": {
