@@ -10,8 +10,9 @@
     "build": "node scripts/build-main.mjs",
     "start": "electron .",
     "dev": "node scripts/build-main.mjs && electron .",
-    "package": "pnpm build && electron-builder --win nsis",
-    "package:dir": "pnpm build && electron-builder --win dir"
+    "package": "pnpm build && electron-builder --win nsis && node scripts/apply-exe-icon.mjs",
+    "package:dir": "pnpm build && electron-builder --win dir && node scripts/apply-exe-icon.mjs",
+    "icons": "node scripts/gen-icons.mjs"
   },
   "build": {
     "appId": "com.eric.dshgui",
