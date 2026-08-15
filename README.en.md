@@ -19,6 +19,11 @@ DHS is delivered officially as a web UI (browser). dsh-gui uses Electron to host
 
 Download, unzip, and run — double-click `dsh-gui.exe` to launch. The first launch automatically installs bundled DHS dependencies (with an optional China mirror for speed); no manual environment setup required.
 
+## System Requirements
+
+- **Windows 10+** (x64): portable build (win-unpacked) available — see Download above
+- **macOS** (Intel & Apple Silicon): built on Electron's cross-platform architecture, runs natively on macOS; macOS packaging/distribution is planned (`platform/macos` reserved)
+
 ## Features
 
 - **Native desktop experience**: standalone window, system tray (minimize-to-tray on X, quit from tray context menu), DeepSeek blue-whale icon

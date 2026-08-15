@@ -19,6 +19,11 @@ DHS 官方以 web ui（浏览器）形态交付。dsh-gui 用 Electron 承载同
 
 下载后解压即用，双击 `dsh-gui.exe` 启动。首次启动自动安装捆绑的 DHS 依赖（可选国内源加速），免手动配置环境。
 
+## 系统要求
+
+- **Windows 10+**（x64）：提供免安装包（win-unpacked），见上方下载
+- **macOS**（Intel & Apple Silicon）：应用基于 Electron 跨平台架构，可在 macOS 原生运行；macOS 打包分发适配规划中（`platform/macos` 预留）
+
 ## 特性
 
 - **原生桌面体验**：独立窗口、系统托盘（X 最小化到托盘、托盘右键退出）、DeepSeek 蓝鲸鱼图标
