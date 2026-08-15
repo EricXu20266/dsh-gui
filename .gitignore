@@ -38,3 +38,6 @@ install/*.msi
 plugins/dsh-discovery/lib/
 plugins/dsh-discovery/client/
 vendor/
+
+# ── 打包运行时（node.exe / pnpm 从外部下载，不进仓库）──
+resources/runtime/
