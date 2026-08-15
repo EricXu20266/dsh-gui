@@ -3,8 +3,6 @@
 packages:
   - "."
   - "../deepseek-harness"
-  - "plugins/dsh-skillmanager"
-  - "plugins/dsh-mcpmanager"
   - "../deepseek-harness/vendor/*"
   - "../deepseek-harness/packages/*/*"
   - "../deepseek-harness/native/landlock-run"

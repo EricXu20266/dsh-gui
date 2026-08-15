@@ -1,4 +1,0 @@
-# dsh-mcpmanager bundle patch: inserts this plugin into a profile's layer stack.
-- insert:
-    - id: dsh-mcpmanager
-      name: 'dsh-mcpmanager'

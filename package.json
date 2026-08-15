@@ -73,11 +73,12 @@
         ]
       },
       {
-        "from": "plugins/dsh-skillmanager",
+        "from": "../dsh-skillmanager",
         "to": "dsh-skillmanager",
         "filter": [
           "**/*",
           "!**/node_modules/**",
+          "!**/.git/**",
           "!**/src/**",
           "!**/*.tsbuildinfo",
           "!**/*.map",
@@ -85,11 +86,12 @@
         ]
       },
       {
-        "from": "plugins/dsh-mcpmanager",
+        "from": "../dsh-mcpmanager",
         "to": "dsh-mcpmanager",
         "filter": [
           "**/*",
           "!**/node_modules/**",
+          "!**/.git/**",
           "!**/src/**",
           "!**/*.tsbuildinfo",
           "!**/*.map",
