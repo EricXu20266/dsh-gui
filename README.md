@@ -10,12 +10,22 @@ DHS 官方以 web ui（浏览器）形态交付。dsh-gui 用 Electron 承载同
 
 ---
 
+## 特性
+
+- **原生桌面体验**：独立窗口、系统托盘（X 最小化到托盘、托盘右键退出）、DeepSeek 蓝鲸鱼图标
+- **首次安装向导**：5 步流程（欢迎 → 下载源选择 → 下载进度 → 检查 → 完成），国内源/原生源/系统代理可选，全程进度真实显示
+- **捆绑分发**：打包版捆绑 Node + pnpm + DHS 源码，首次启动自动装依赖（可选国内源加速），免手动配置环境
+- **内置插件市场**：捆绑 dsh-discovery 插件，首次安装自动注册，开箱即用
+- **中英双语**：界面语言跟随系统，可手动切换，并映射到 DHS 内核 `locale.preference`（内核 UI 跟随）
+- **安装日志**：安装全过程落盘 `%APPDATA%/dsh-gui/install.log`，失败可追溯
+- **零内核改动**：DHS 内核保持官方原样，GUI 只做壳
+
 ## 架构
 
 ```
 ┌─────────────────────────────────────────────┐
 │ Electron App（dsh-gui）                       │
-│  main 进程 ──spawn──> DHS host 子进程（系统 Node）│
+│  main 进程 ──spawn──> DHS host 子进程          │
 │     │                    └─ apps/cli/bin.js  │
 │     │                        --profile web   │
 │     │                        → 127.0.0.1:3080│
@@ -23,15 +33,15 @@ DHS 官方以 web ui（浏览器）形态交付。dsh-gui 用 Electron 承载同
 └─────────────────────────────────────────────┘
 ```
 
-- **GUI 壳**：Electron（窗口、进程管理、后续的原生增强）
-- **DHS host**：以子进程方式运行官方 `dsh`（系统 Node 24），内核 100% 保持
+- **GUI 壳**：Electron（窗口、托盘、进程管理、安装向导）
+- **DHS host**：子进程方式运行官方 `dsh`（打包版用捆绑 Node 24，开发态用系统 Node），内核 100% 保持
 - **通信**：本地 HTTP + WebSocket（`127.0.0.1:3080`）
 - **配置**：`~/.dsh`（DHS 通用 home，web/gui 双模式共用）
 
 > ⚠️ 已知边界：DHS 的 cordis loader 依赖 Node 内部 API（`node-addon-require-builtin`），
 > 与 Electron 内置 Node 不兼容——因此 host 走子进程而非 in-process（详见 docs/ARCHITECT.md）。
 
-## 快速开始
+## 快速开始（开发态）
 
 ```bash
 # 依赖（workspace 包含 ../deepseek-harness）
@@ -44,13 +54,25 @@ pnpm --filter @deepseek-ai/dsh-root run build
 pnpm build && pnpm start
 ```
 
+## 打包分发
+
+```bash
+# 构建 + 打包（win-unpacked 目录）
+pnpm build
+pnpm exec electron-builder --win dir
+node scripts/apply-exe-icon.mjs   # electron-builder 26 的 exe 图标编辑有静默 bug，需手动嵌入
+```
+
+打包版结构：`resources/runtime`（捆绑 Node + pnpm）、`resources/dhs`（DHS 源码，不含 node_modules，首次启动向导自动安装）、`resources/dsh-discovery`（内置插件）。
+
 ## 目录结构
 
 ```
 dsh-gui/
-├── electron/        # GUI 壳引擎（main/preload/renderer）
+├── electron/        # GUI 壳引擎（main/preload/renderer/安装向导）
+├── plugins/         # 内置插件（dsh-discovery 插件市场）
 ├── platform/        # 平台适配（windows 打包 / macos 预留）
-├── resources/       # 资源（图标等）
+├── resources/       # 资源（图标、打包运行时）
 ├── install/         # 安装器配置
 ├── scripts/         # 构建/打包脚本
 ├── tools/           # 辅助工具
