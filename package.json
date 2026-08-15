@@ -5,16 +5,77 @@
   "description": "DHS (DeepSeek Harness) Electron GUI client — webui → gui, in-process host, kernel untouched",
   "type": "module",
   "main": "dist/main.cjs",
+  "author": "Eric Xu",
   "scripts": {
     "build": "node scripts/build-main.mjs",
     "start": "electron .",
-    "dev": "node scripts/build-main.mjs && electron ."
+    "dev": "node scripts/build-main.mjs && electron .",
+    "package": "pnpm build && electron-builder --win nsis",
+    "package:dir": "pnpm build && electron-builder --win dir"
+  },
+  "build": {
+    "appId": "com.eric.dshgui",
+    "productName": "dsh-gui",
+    "electronDist": "node_modules/electron/dist",
+    "disableAsarIntegrity": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/runtime/node",
+        "to": "runtime/node",
+        "filter": [
+          "**/*",
+          "!**/*.md",
+          "!**/include/**",
+          "!**/share/**",
+          "!**/src/**",
+          "!**/CHANGELOG*",
+          "!**/LICENSE*"
+        ]
+      },
+      {
+        "from": "resources/runtime/pnpm",
+        "to": "runtime/pnpm"
+      },
+      {
+        "from": "../deepseek-harness",
+        "to": "dhs",
+        "filter": [
+          "**/*",
+          "!**/node_modules/**",
+          "!**/.git/**",
+          "!**/tmp/**",
+          "!**/*.log"
+        ]
+      }
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "devDependencies": {
     "@deepseek-ai/dsh-app-boot": "workspace:^",
     "@deepseek-ai/dsh-host-apiproxy": "workspace:^",
     "@deepseek-ai/dsh-web-app": "workspace:^",
     "electron": "^43.4.0",
+    "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
     "tsx": "^4.23.12"
   }

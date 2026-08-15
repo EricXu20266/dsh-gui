@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>dsh-gui 首次启动安装</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", "Segoe UI", sans-serif; background: #f5f7fa; color: #1f2328; user-select: none; }
+  .wizard { max-width: 560px; margin: 0 auto; padding: 28px 32px; }
+  .steps { display: flex; justify-content: space-between; margin-bottom: 28px; }
+  .step-dot { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; position: relative; }
+  .step-dot::before { content: ""; position: absolute; top: 13px; left: -50%; width: 100%; height: 2px; background: #d0d7de; }
+  .step-dot:first-child::before { display: none; }
+  .step-dot .num { width: 26px; height: 26px; border-radius: 50%; background: #d0d7de; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; position: relative; z-index: 1; }
+  .step-dot.active .num { background: #4f8cff; }
+  .step-dot.done .num { background: #34c759; }
+  .step-dot.active::before, .step-dot.done::before { background: #4f8cff; }
+  .step-dot .lbl { font-size: 12px; color: #6b7280; }
+  .step-dot.active .lbl { color: #1f2328; font-weight: 600; }
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; min-height: 300px; }
+  .card h2 { font-size: 18px; margin-bottom: 8px; }
+  .card .desc { color: #6b7280; font-size: 13px; line-height: 1.7; margin-bottom: 18px; }
+  .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #e5e7eb; font-size: 13px; }
+  .info-row:last-child { border-bottom: none; }
+  .info-row .k { color: #6b7280; }
+  .info-row .v { font-weight: 600; word-break: break-all; max-width: 320px; text-align: right; }
+  .radio-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1.5px solid #e5e7eb; border-radius: 10px; margin-bottom: 10px; cursor: pointer; }
+  .radio-item.sel { border-color: #4f8cff; background: #f0f6ff; }
+  .radio-item input { margin-top: 3px; accent-color: #4f8cff; }
+  .radio-item .t { font-size: 14px; font-weight: 600; }
+  .radio-item .s { font-size: 12px; color: #6b7280; margin-top: 3px; }
+  .proxy-box { margin: 4px 0 14px 30px; display: none; }
+  .proxy-box.show { display: block; }
+  .proxy-box label { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 8px; }
+  .proxy-box input[type=text] { width: 100%; padding: 8px 10px; border: 1px solid #d0d7de; border-radius: 8px; font-size: 13px; outline: none; }
+  .proxy-box input[type=text]:focus { border-color: #4f8cff; }
+  .bar-wrap { background: #e5e7eb; border-radius: 99px; height: 10px; overflow: hidden; margin: 14px 0 8px; }
+  .bar { height: 100%; width: 0%; background: linear-gradient(90deg, #4f8cff, #6ea6ff); border-radius: 99px; transition: width .3s; }
+  .pct { font-size: 22px; font-weight: 700; color: #4f8cff; text-align: center; margin: 4px 0 6px; }
+  .phase { text-align: center; font-size: 13px; color: #6b7280; margin-bottom: 12px; }
+  .warn { background: #fff8e6; border: 1px solid #f0d58c; color: #8a6d1a; border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.6; margin-top: 14px; }
+  .ok-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; font-size: 13px; color: #6b7280; }
+  .ok-item.on { color: #1f2328; }
+  .ok-item .mark { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #d0d7de; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; }
+  .ok-item.on .mark { border-color: #34c759; color: #34c759; }
+  .nav { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+  .btn { padding: 9px 22px; border-radius: 8px; font-size: 14px; cursor: pointer; border: 1px solid #d0d7de; background: #fff; color: #1f2328; }
+  .btn:hover { background: #f5f7fa; }
+  .btn.primary { background: #4f8cff; border-color: #4f8cff; color: #fff; }
+  .btn.primary:hover { background: #3b7df0; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.hidden { display: none; }
+  .err { color: #d1242f; font-size: 12px; margin-top: 8px; min-height: 16px; }
+  .done-icon { width: 56px; height: 56px; border-radius: 50%; background: #34c759; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 8px auto 14px; }
+  .center { text-align: center; }
+  .title-main { text-align: center; margin-bottom: 18px; }
+  .title-main h1 { font-size: 20px; margin-bottom: 6px; }
+  .title-main p { font-size: 13px; color: #6b7280; }
+</style>
+</head>
+<body>
+<div class="wizard">
+  <div class="steps" id="steps">
+    <div class="step-dot active" data-step="1"><span class="num">1</span><span class="lbl">说明</span></div>
+    <div class="step-dot" data-step="2"><span class="num">2</span><span class="lbl">下载源</span></div>
+    <div class="step-dot" data-step="3"><span class="num">3</span><span class="lbl">下载</span></div>
+    <div class="step-dot" data-step="4"><span class="num">4</span><span class="lbl">检查</span></div>
+    <div class="step-dot" data-step="5"><span class="num">5</span><span class="lbl">完成</span></div>
+  </div>
+
+  <div class="card">
+    <!-- 1 欢迎 -->
+    <div class="step" id="step1">
+      <div class="title-main"><h1>欢迎使用 dsh-gui</h1><p>首次启动需要安装 DeepSeek Harness 依赖</p></div>
+      <div class="info-row"><span class="k">预计下载大小</span><span class="v" id="estSize">--</span></div>
+      <div class="info-row"><span class="k">安装位置</span><span class="v" id="installDir">--</span></div>
+      <div class="info-row"><span class="k">依赖组件</span><span class="v">DHS 内核 + Node 运行时</span></div>
+      <div class="warn">安装过程需要联网下载依赖包。请确保磁盘空间充足、网络畅通。</div>
+    </div>
+
+    <!-- 2 下载源 -->
+    <div class="step" id="step2" style="display:none">
+      <h2>选择下载源</h2>
+      <div class="desc">选择依赖包的下载来源。国内网络建议使用国内镜像源，速度更快。</div>
+      <div class="radio-item sel" data-src="npmmirror">
+        <input type="radio" name="src" value="npmmirror" checked>
+        <div><div class="t">国内镜像源（npmmirror）</div><div class="s">阿里云 npm 镜像，国内速度最快</div></div>
+      </div>
+      <div class="radio-item" data-src="npmjs">
+        <input type="radio" name="src" value="npmjs">
+        <div><div class="t">原生源（npmjs.org）</div><div class="s">官方源，海外直连速度取决于网络</div></div>
+      </div>
+      <div class="radio-item" data-src="proxy">
+        <input type="radio" name="src" value="proxy">
+        <div><div class="t">原生源 + 代理</div><div class="s">通过代理访问原生源</div></div>
+      </div>
+      <div class="proxy-box" id="proxyBox">
+        <label><input type="checkbox" id="useSystemProxy"> 使用操作系统代理</label>
+        <input type="text" id="proxyInput" placeholder="代理地址，如 http://127.0.0.1:7890">
+      </div>
+      <div class="err" id="srcErr"></div>
+    </div>
+
+    <!-- 3 下载 -->
+    <div class="step" id="step3" style="display:none">
+      <h2 class="center" style="text-align:center">正在下载安装依赖</h2>
+      <div class="bar-wrap"><div class="bar" id="bar"></div></div>
+      <div class="pct" id="pct">0%</div>
+      <div class="phase" id="phase">准备中…</div>
+      <div class="warn" id="dlWarn">⚠️ 安装期间请勿关闭此窗口或关闭应用，否则安装会中断，需要重新开始。</div>
+    </div>
+
+    <!-- 4 检查 -->
+    <div class="step" id="step4" style="display:none">
+      <h2>检查安装结果</h2>
+      <div class="desc">安装完成，正在校验依赖完整性与运行环境。</div>
+      <div class="ok-item" id="ck1"><span class="mark"></span><span>依赖目录就绪（node_modules）</span></div>
+      <div class="ok-item" id="ck2"><span class="mark"></span><span>DHS 可执行文件存在（apps/cli/lib/bin.js）</span></div>
+      <div class="ok-item" id="ck3"><span class="mark"></span><span>Node 运行时可用</span></div>
+      <div class="err" id="verifyErr"></div>
+    </div>
+
+    <!-- 5 完成 -->
+    <div class="step" id="step5" style="display:none">
+      <div class="center">
+        <div class="done-icon">✓</div>
+        <h2>安装完成</h2>
+        <div class="desc" style="margin-bottom:4px">DHS 依赖已就绪，即将启动 dsh-gui。</div>
+        <div class="desc">后续启动无需再次安装。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="btn" id="btnBack">上一步</button>
+    <button class="btn primary" id="btnNext">下一步</button>
+  </div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id)
+const RADIO = { npmmirror: 'https://registry.npmmirror.com', npmjs: 'https://registry.npmjs.org' }
+let state = { step: 1, installing: false }
+
+async function init() {
+  try {
+    const info = await window.setupAPI.getInfo()
+    $('estSize').textContent = `约 ${info.estimatedMb} MB`
+    $('installDir').textContent = info.dhsRoot
+  } catch { $('estSize').textContent = '未知' }
+}
+init()
+
+function go(step) {
+  state.step = step
+  document.querySelectorAll('.step').forEach((el, i) => (el.style.display = i + 1 === step ? 'block' : 'none'))
+  document.querySelectorAll('.step-dot').forEach((el, i) => {
+    el.className = 'step-dot' + (i + 1 === step ? ' active' : i + 1 < step ? ' done' : '')
+  })
+  $('btnBack').classList.toggle('hidden', step <= 2 || state.installing)
+  $('btnNext').classList.toggle('hidden', step >= 3)
+  if (step === 2) $('srcErr').textContent = ''
+}
+
+$('btnBack').onclick = () => { if (state.step > 2 && !state.installing) go(state.step - 1) }
+$('btnNext').onclick = () => {
+  if (state.step === 1) go(2)
+  else if (state.step === 2) startInstall()
+}
+
+// 下载源单选切换
+document.querySelectorAll('.radio-item').forEach((item) => {
+  item.onclick = () => {
+    document.querySelectorAll('.radio-item').forEach((i) => i.classList.remove('sel'))
+    item.classList.add('sel')
+    item.querySelector('input').checked = true
+    $('proxyBox').classList.toggle('show', item.dataset.src === 'proxy')
+    if (item.dataset.src !== 'proxy') $('srcErr').textContent = ''
+  }
+})
+
+// 代理互斥：勾选系统代理 → 禁用自定义文本框；输入自定义代理 → 取消系统代理勾选
+$('useSystemProxy').onchange = () => {
+  $('proxyInput').disabled = $('useSystemProxy').checked
+  if ($('useSystemProxy').checked) $('srcErr').textContent = ''
+}
+$('proxyInput').oninput = () => {
+  if ($('proxyInput').value.trim()) $('useSystemProxy').checked = false
+}
+
+async function startInstall() {
+  const src = document.querySelector('input[name=src]:checked').value
+  const config = { registry: RADIO[src] || RADIO.npmjs, proxy: '', useSystemProxy: false }
+  if (src === 'proxy') {
+    config.useSystemProxy = $('useSystemProxy').checked
+    config.proxy = $('proxyInput').value.trim()
+    if (!config.useSystemProxy && !config.proxy) { $('srcErr').textContent = '请填写代理地址，或勾选使用系统代理'; return }
+  }
+  state.installing = true
+  go(3)
+  const off = window.setupAPI.onProgress((p) => {
+    $('bar').style.width = p.percent + '%'
+    $('pct').textContent = p.percent + '%'
+    $('phase').textContent = p.message
+  })
+  try {
+    const res = await window.setupAPI.startInstall(config)
+    off()
+    if (res.ok) { go(4); setTimeout(runVerify, 400) }
+    else {
+      state.installing = false
+      $('btnNext').textContent = '下一步'
+      $('srcErr').textContent = '安装失败：' + (res.error || '未知错误') + '。请检查网络与下载源后重试。'
+      go(2)
+    }
+  } catch (e) {
+    off()
+    state.installing = false
+    $('btnNext').textContent = '下一步'
+    $('srcErr').textContent = '安装异常：' + e.message
+    go(2)
+  }
+}
+
+async function runVerify() {
+  const cks = [['ck1', '依赖目录'], ['ck2', 'DHS 可执行'], ['ck3', 'Node 运行时']]
+  for (const [id] of cks) { $(id).classList.add('on'); await new Promise((r) => setTimeout(r, 500)) }
+  await new Promise((r) => setTimeout(r, 800))
+  go(5)
+  setTimeout(() => window.close(), 1500)
+}
+</script>
+</body>
+</html>

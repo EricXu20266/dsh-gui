@@ -19,6 +19,9 @@ linkWorkspacePackages: true
 overrides:
   '@deepseek-ai/cosmokit': 'link:../deepseek-harness/vendor/cosmokit'
   '@deepseek-ai/schemastery': 'link:../deepseek-harness/vendor/schemastery'
+  # electron-builder 26.15.3 声明 @electron/get@^3 但代码用了 5.x 的 ElectronDownloadCacheMode
+  # （@electron/get@3 无此导出 → resolveCacheMode 崩溃），强制 5.1.0
+  '@electron/get': '^5.1.0'
 
 peerDependencyRules:
   allowedVersions:
@@ -35,6 +38,7 @@ allowBuilds:
   node-addon-require-builtin: false
   koffi: true
   '@deepseek-ai/dsh-subprocess-local@file:../deepseek-harness/packages/subprocess/subprocess-local': true
+  electron-winstaller: true
 
 minimumReleaseAgeExclude:
   - '@earendil-works/pi-ai@0.82.1'
