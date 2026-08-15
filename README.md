@@ -1,5 +1,7 @@
 # dsh-gui — DeepSeek Harness 桌面客户端
 
+> 🌐 **中文 | [English](README.en.md)**
+
 > DHS (DeepSeek Harness) 的 Electron GUI 客户端：把 web ui 的使用方式封装为原生桌面 GUI。内核最大限度的保持 DHS。
 
 [![Electron](https://img.shields.io/badge/Electron-43+-blue.svg)](https://www.electronjs.org)
