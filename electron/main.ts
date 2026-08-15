@@ -184,18 +184,27 @@ function writeLocalePreference(locale: 'zh' | 'en'): void {
 /** 解析 pnpm --reporter=ndjson 事件 → 进度回调 */
 function parsePnpmEvent(evt: Record<string, unknown>, onProgress: ProgressCb): void {
   const s = evt.stage
-  if (s === 'resolution_started') onProgress({ stage: 'download', percent: 10, message: '解析依赖关系…' })
-  else if (s === 'resolution_finished') onProgress({ stage: 'download', percent: 22, message: '依赖解析完成，开始下载…' })
-  else if (s === 'importing_started') onProgress({ stage: 'download', percent: 30, message: '下载依赖包…' })
+  if (s === 'resolution_started') onProgress({ stage: 'download', percent: 8, message: '解析依赖关系…' })
+  else if (s === 'resolution_finished') onProgress({ stage: 'download', percent: 12, message: '依赖解析完成' })
+  else if (s === 'fetching_started') onProgress({ stage: 'download', percent: 15, message: '开始下载依赖包…' })
+  else if (s === 'fetching_progress') {
+    // 下载阶段真实进度：fetched/requirement 是本次实际下载的包数（store 命中的不计入）
+    const fetched = Number(evt.fetched ?? 0)
+    const req = Number(evt.requirement ?? 1)
+    const pct = req > 0 ? 15 + Math.round((fetched / req) * 65) : 15
+    onProgress({ stage: 'download', percent: Math.min(pct, 80), message: `正在下载依赖 ${fetched}/${req}` })
+  } else if (s === 'fetching_finished') {
+    onProgress({ stage: 'download', percent: 82, message: '依赖下载完成，开始链接…' })
+  } else if (s === 'importing_started') onProgress({ stage: 'download', percent: 85, message: '正在写入依赖…' })
   else if (s === 'importing_progress') {
     const imported = Number(evt.imported ?? 0)
     const req = Number(evt.requirement ?? 1)
-    const pct = req > 0 ? 30 + Math.round((imported / req) * 60) : 30
-    onProgress({ stage: 'download', percent: Math.min(pct, 92), message: `下载依赖 ${imported}/${req}` })
+    const pct = req > 0 ? 85 + Math.round((imported / req) * 10) : 85
+    onProgress({ stage: 'download', percent: Math.min(pct, 95), message: `正在链接依赖 ${imported}/${req}` })
   } else if (s === 'importing_finished') {
-    onProgress({ stage: 'download', percent: 92, message: '依赖下载完成，链接包…' })
+    onProgress({ stage: 'download', percent: 95, message: '依赖安装完成' })
   } else if (s === 'done') {
-    onProgress({ stage: 'download', percent: 94, message: '安装收尾中…' })
+    onProgress({ stage: 'download', percent: 96, message: '安装收尾中…' })
   }
 }
 
