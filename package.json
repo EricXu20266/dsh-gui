@@ -56,7 +56,7 @@
         ]
       },
       {
-        "from": "../dsh-discovery",
+        "from": "mac-packing-resource/dsh-discovery",
         "to": "dsh-discovery",
         "filter": [
           "**/*",
@@ -73,7 +73,7 @@
         ]
       },
       {
-        "from": "../dsh-skillmanager",
+        "from": "mac-packing-resource/dsh-skillmanager",
         "to": "dsh-skillmanager",
         "filter": [
           "**/*",
@@ -86,7 +86,7 @@
         ]
       },
       {
-        "from": "../dsh-mcpmanager",
+        "from": "mac-packing-resource/dsh-mcpmanager",
         "to": "dsh-mcpmanager",
         "filter": [
           "**/*",
@@ -99,7 +99,7 @@
         ]
       },
       {
-        "from": "../dsh-proxy",
+        "from": "mac-packing-resource/dsh-proxy",
         "to": "dsh-proxy",
         "filter": [
           "**/*",
@@ -164,6 +164,7 @@
     "@deepseek-ai/dsh-app-boot": "workspace:^",
     "@deepseek-ai/dsh-host-apiproxy": "workspace:^",
     "@deepseek-ai/dsh-web-app": "workspace:^",
+    "biome": "^0.3.3",
     "electron": "^43.4.0",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",

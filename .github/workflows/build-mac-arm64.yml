@@ -16,7 +16,8 @@ jobs:
       # workspace 相对路径布局（与本地 E:\AllinDeepSeek 一致）：
       #   $GITHUB_WORKSPACE/dsh-gui
       #   $GITHUB_WORKSPACE/../deepseek-harness  → dsh-gui/../deepseek-harness
-      #   dsh-gui/../dsh-discovery 等三个插件
+      # 4 个外置插件（dsh-discovery/skillmanager/mcpmanager/proxy）已打进仓库
+      # mac-packing-resource/（见 scripts/sync-mac-packing-resource.mjs），无需 checkout。
       - uses: actions/checkout@v4
         with:
           path: dsh-gui
@@ -25,21 +26,6 @@ jobs:
         with:
           repository: deepseek-ai/deepseek-harness
           path: deepseek-harness
-
-      - uses: actions/checkout@v4
-        with:
-          repository: EricXu20266/dsh-discovery
-          path: dsh-discovery
-
-      - uses: actions/checkout@v4
-        with:
-          repository: EricXu20266/dsh-skillmanager
-          path: dsh-skillmanager
-
-      - uses: actions/checkout@v4
-        with:
-          repository: EricXu20266/dsh-mcpmanager
-          path: dsh-mcpmanager
 
       - uses: actions/setup-node@v4
         with:

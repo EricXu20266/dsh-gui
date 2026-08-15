@@ -1,0 +1,8 @@
+# 构建产物与依赖（git 安装时 prepare 脚本自动生成 /lib/ 与 /client/）
+/lib/
+/client/
+node_modules/
+
+# 编辑器/系统
+.DS_Store
+*.log
