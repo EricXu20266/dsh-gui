@@ -54,12 +54,16 @@ export function filterPlugins(
   opts: { q: string; cat: string },
 ): PluginEntry[] {
   const all = listing?.plugins ?? []
-  const q = opts.q.trim().toLowerCase()
+  const q = opts.q.trim()
+  const qLower = q.toLowerCase()
+  // 搜索词命中分类 label 时，复用该分类的英文关键词，避免中文搜索漏掉英文内容
+  const labelCat = q === '' ? undefined : CATEGORY_KEYWORDS.find((c) => c.label === q)
   return all.filter((p) => {
     if (opts.cat !== 'all' && categoryOf(p) !== opts.cat) return false
     if (q === '') return true
+    if (labelCat) return categoryOf(p) === labelCat.id
     const hay = `${p.name} ${p.owner} ${p.description} ${p.topics.join(' ')}`.toLowerCase()
-    return hay.includes(q)
+    return hay.includes(qLower)
   }).sort((a, b) => b.stars - a.stars)
 }
 
