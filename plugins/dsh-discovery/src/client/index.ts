@@ -186,12 +186,13 @@ const tabRowStyle: React.CSSProperties = {
 }
 const tabStyle: React.CSSProperties = {
   border: 'none', background: 'transparent', color: 'var(--dsw-alias-label-secondary, #9aa0b4)',
-  fontSize: 13, padding: '8px 16px', cursor: 'pointer', borderBottom: '2px solid transparent',
-  transition: 'color .15s ease, border-color .15s ease',
+  fontSize: 13, padding: '8px 16px', cursor: 'pointer', borderRadius: 8,
+  transition: 'background-color .15s ease, color .15s ease',
 }
 const tabOnStyle: React.CSSProperties = {
-  ...tabStyle, color: 'var(--dsw-alias-brand-primary, #7aa2ff)',
-  borderBottomColor: 'var(--dsw-alias-brand-primary, #7aa2ff)', fontWeight: 600,
+  ...tabStyle,
+  background: 'var(--dsw-static-deepseek-500, #4176E6)',
+  color: '#ffffff', fontWeight: 600,
 }
 const scenarioCardStyle: React.CSSProperties = {
   background: 'var(--dsw-alias-bg-layer-1, #1a1a2b)', border: '1px solid var(--dsw-alias-border-l2, #2e2e4a)',
