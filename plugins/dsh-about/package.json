@@ -1,7 +1,7 @@
 {
   "name": "dsh-about",
   "description": "DSH About — built-in settings tab showing version info of the dsh-gui client, dsh kernel, and installed plugins",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "main": "lib/index.js",
