@@ -15,14 +15,18 @@ DHS 官方以 web ui（浏览器）形态交付。dsh-gui 用 Electron 承载同
 
 ## 下载
 
-**Windows x64 免安装包（win-unpacked）：[GitHub Releases](https://github.com/EricXu20266/dsh-gui/releases)**
+| 平台 | 安装包 | 说明 |
+|---|---|---|
+| **Windows 10+**（x64） | `dsh-gui-v0.2.0.zip` | 免安装包，解压后双击 `dsh-gui.exe` 启动 |
+| **macOS**（Apple Silicon / arm64） | `dsh-gui-0.2.0-arm64.dmg` | 安装包，打开后拖入 Applications 启动 |
 
-下载后解压即用，双击 `dsh-gui.exe` 启动。首次启动自动安装捆绑的 DHS 依赖（可选国内源加速），免手动配置环境。
+下载见 **[GitHub Releases](https://github.com/EricXu20266/dsh-gui/releases)**。首次启动自动安装捆绑的 DHS 依赖（可选国内源加速），免手动配置环境。
 
 ## 系统要求
 
-- **Windows 10+**（x64）：提供免安装包（win-unpacked），见上方下载
-- **macOS**（Apple Silicon / arm64）：已支持，由 GitHub Actions CI（`build-mac-arm64`）构建，产物在 Actions artifacts 中获取
+- **Windows 10+**（x64）：免安装包（zip），见上方下载
+- **macOS 14+**（Apple Silicon / arm64）：dmg 安装包，见上方下载
+- **源码运行**：任何平台均可通过 `pnpm install && pnpm dev` 从源码启动（见「快速开始」）
 
 ## 特性
 

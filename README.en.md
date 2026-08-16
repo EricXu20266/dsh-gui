@@ -15,14 +15,18 @@ DHS is delivered officially as a web UI (browser). dsh-gui uses Electron to host
 
 ## Download
 
-**Windows x64 portable build (win-unpacked): [GitHub Releases](https://github.com/EricXu20266/dsh-gui/releases)**
+| Platform | Package | Notes |
+|---|---|---|
+| **Windows 10+** (x64) | `dsh-gui-v0.2.0.zip` | Portable build — unzip, double-click `dsh-gui.exe` to launch |
+| **macOS** (Apple Silicon / arm64) | `dsh-gui-0.2.0-arm64.dmg` | Installer — open and drag to Applications |
 
-Download, unzip, and run — double-click `dsh-gui.exe` to launch. The first launch automatically installs bundled DHS dependencies (with an optional China mirror for speed); no manual environment setup required.
+Get them from **[GitHub Releases](https://github.com/EricXu20266/dsh-gui/releases)**. The first launch automatically installs bundled DHS dependencies (with an optional China mirror for speed); no manual environment setup required.
 
 ## System Requirements
 
-- **Windows 10+** (x64): portable build (win-unpacked) available — see Download above
-- **macOS** (Apple Silicon / arm64): supported, built by GitHub Actions CI (`build-mac-arm64`); artifacts available from Actions artifacts
+- **Windows 10+** (x64): portable build (zip) — see Download above
+- **macOS 14+** (Apple Silicon / arm64): dmg installer — see Download above
+- **Run from source**: any platform via `pnpm install && pnpm dev` (see Quick Start below)
 
 ## Features
 
