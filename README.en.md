@@ -144,12 +144,30 @@ pnpm package       # nsis installer → release/dsh-gui-setup-*.exe
 
 Released versions: **[GitHub Releases](https://github.com/EricXu20266/dsh-gui/releases)**.
 
-### macOS (CI build)
+### macOS (build from source)
 
-macOS ARM64 packages cannot be produced on Windows (the Electron darwin-arm64 binary and native-module ABIs must be fetched/rebuilt in a macOS environment); they are built by GitHub Actions:
+dsh-gui is a workspace project: the kernel dependency `deepseek-harness` must sit **next to `dsh-gui`** (both `pnpm-workspace.yaml`'s `../deepseek-harness` and the icon source `apps/web/public/favicon.svg` resolve relative to that layout):
 
-1. Open [Actions → build-mac-arm64](https://github.com/EricXu20266/dsh-gui/actions/workflows/build-mac-arm64.yml) → **Run workflow** (manual trigger; pushes do not auto-run, to save Actions minutes)
-2. When done, download `dsh-gui-mac-arm64` from the workflow run's Artifacts (contains `release/*.dmg` + `release/*.zip`, arm64) and publish it to GitHub Releases
+```bash
+# Layout: two repos side by side
+#   ~/dev/dsh-gui
+#   ~/dev/deepseek-harness
+git clone https://github.com/EricXu20266/dsh-gui.git
+git clone https://github.com/deepseek-ai/deepseek-harness.git
+
+cd dsh-gui
+pnpm install                                    # install deps (incl. DHS workspace packages)
+pnpm --filter @deepseek-ai/dsh-root run build   # build the DHS kernel (lib + web dist)
+
+# Run in dev mode (uses the system Node; no bundled runtime needed)
+pnpm build && pnpm start
+
+# Package the macOS app (Apple Silicon; outputs release/*.dmg + *.zip)
+node scripts/gen-icons.mjs                      # generate mac icons (icon-512.png)
+pnpm exec electron-builder --mac --arm64 --publish never
+```
+
+> The packaged build bundles a Node + pnpm runtime under `resources/runtime/` (gitignored — prepare it yourself): download the darwin-arm64 Node from nodejs.org and the pnpm tarball from the npm registry, extracting each into the matching folder.
 
 Packaged-build layout: `resources/runtime` (bundled Node + pnpm), `resources/dhs` (DHS source seed, no node_modules), `resources/dsh-*` (four standalone plugin repos + built-in dsh-about). On first run the wizard copies the DHS source to `%APPDATA%/dsh-gui/dhs` (macOS: `~/Library/Application Support/dsh-gui/dhs`) before installing dependencies, so the app never writes into its own Resources directory.
 

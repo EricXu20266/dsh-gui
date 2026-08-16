@@ -144,12 +144,30 @@ pnpm package       # nsis 安装包 → release/dsh-gui-setup-*.exe
 
 产物见 **[GitHub Releases](https://github.com/EricXu20266/dsh-gui/releases)**。
 
-### macOS（CI 打包）
+### macOS（源码构建）
 
-macOS ARM64 包无法在 Windows 本地产出（Electron darwin-arm64 二进制与原生模块 ABI 需在 macOS 环境获取/重编），由 GitHub Actions 构建：
+dsh-gui 是 workspace 项目，内核依赖 `deepseek-harness` 必须放在 **dsh-gui 同级目录**（`pnpm-workspace.yaml` 的 `../deepseek-harness`、图标源 `apps/web/public/favicon.svg` 都按此相对路径解析）：
 
-1. 打开 [Actions → build-mac-arm64](https://github.com/EricXu20266/dsh-gui/actions/workflows/build-mac-arm64.yml) → **Run workflow**（手动触发，push 不自动跑，避免浪费 Actions minutes）
-2. 完成后在 workflow run 的 Artifacts 下载 `dsh-gui-mac-arm64`（含 `release/*.dmg` + `release/*.zip`，arm64），发布到 GitHub Releases
+```bash
+# 目录布局：两个仓库同级
+#   ~/dev/dsh-gui
+#   ~/dev/deepseek-harness
+git clone https://github.com/EricXu20266/dsh-gui.git
+git clone https://github.com/deepseek-ai/deepseek-harness.git
+
+cd dsh-gui
+pnpm install                                    # 安装依赖（含 workspace 的 DHS 包）
+pnpm --filter @deepseek-ai/dsh-root run build   # 构建 DHS 内核（lib + web dist）
+
+# 开发态运行（用系统 Node，无需捆绑运行时）
+pnpm build && pnpm start
+
+# 打包 macOS 应用（Apple Silicon，产物 release/*.dmg + *.zip）
+node scripts/gen-icons.mjs                      # 生成 mac 图标（icon-512.png）
+pnpm exec electron-builder --mac --arm64 --publish never
+```
+
+> 打包版需要捆绑 Node + pnpm 运行时（`resources/runtime/`，该目录被 gitignore，需自行准备）：从 nodejs.org 下载 darwin-arm64 版 Node、从 npm registry 取 pnpm tarball，解压到对应目录即可。
 
 打包版结构：`resources/runtime`（捆绑 Node + pnpm）、`resources/dhs`（DHS 源码种子，不含 node_modules）、`resources/dsh-*`（四个独立插件仓库 + 内置 dsh-about）。首次启动向导会把 DHS 源码复制到 `%APPDATA%/dsh-gui/dhs`（macOS 为 `~/Library/Application Support/dsh-gui/dhs`）后再安装依赖，避免写入应用资源目录。
 
