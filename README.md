@@ -26,13 +26,15 @@ DHS 官方以 web ui（浏览器）形态交付。dsh-gui 用 Electron 承载同
 
 ## 特性
 
-- **原生桌面体验**：独立窗口、系统托盘（X 最小化到托盘、托盘右键退出）、DeepSeek 蓝鲸鱼图标
-- **首次安装向导**：5 步流程（欢迎 → 下载源选择 → 下载进度 → 检查 → 完成），国内源/原生源/系统代理可选，全程进度真实显示
+- **原生桌面体验**：独立窗口、系统托盘（X 最小化到托盘、托盘右键退出）、单实例锁、DeepSeek 蓝鲸鱼图标
+- **动态端口**：host 以 `dsh web --port 0` 启动，解析就绪 URL 后加载窗口，避免 3080 端口冲突
+- **首次安装向导**：5 步流程（欢迎 → 下载源选择 → 下载进度 → 真实校验 → 完成），国内源/原生源/系统代理可选，全程进度真实显示
 - **捆绑分发**：打包版捆绑 Node + pnpm + DHS 源码 + 内置插件，首次启动自动装依赖，开箱即用
 - **内置插件体系**：捆绑 5 个插件（插件搜索 / Skill 管理 / MCP 管理 / 全局代理 / 关于），覆盖 DHS 的日常管理与扩展——详见下方章节
 - **插件 agent 感知**：每个内置插件向 host 注册 `systemPrompt` section，模型每轮会话都能感知已安装插件的能力说明，无需手动提示
 - **全局代理**：设置页图形化配置系统代理/手动代理，GUI 启动时注入环境变量，DHS 全链路（LLM 调用 / 内置搜索 / MCP 客户端）走代理
 - **中英双语**：界面语言跟随系统，可手动切换，并映射到 DHS 内核 `locale.preference`（内核 UI 跟随）
+- **安全基线**：主窗口只允许本机 host origin 导航，外链走系统浏览器，危险权限默认拒绝，向导页启用 CSP
 - **安装日志**：安装全过程落盘 `%APPDATA%/dsh-gui/install.log`，失败可追溯
 - **零内核改动**：DHS 内核保持官方原样，GUI 只做壳
 
@@ -88,14 +90,15 @@ DHS 网络栈全链路裸 `fetch()`，不读 Windows 系统代理；Node 24+ 支
 │  main 进程 ──spawn──> DHS host 子进程          │
 │     │                    └─ apps/cli/bin.js  │
 │     │                        --profile web   │
-│     │                        → 127.0.0.1:3080│
+│     │                        --port 0        │
+│     │                        → 127.0.0.1:<p> │
 │  BrowserWindow loadURL ←─────────────────────┘
 └─────────────────────────────────────────────┘
 ```
 
-- **GUI 壳**：Electron（窗口、托盘、进程管理、安装向导）
+- **GUI 壳**：Electron（窗口、托盘、进程管理、安装向导、单实例锁）
 - **DHS host**：子进程方式运行官方 `dsh`（打包版用捆绑 Node 24，开发态用系统 Node），内核 100% 保持
-- **通信**：本地 HTTP + WebSocket（`127.0.0.1:3080`）
+- **通信**：本地 HTTP + WebSocket（`127.0.0.1`，端口由 `--port 0` 动态分配，避免 3080 冲突）
 - **配置**：`~/.dsh`（DHS 通用 home，web/gui 双模式共用）
 
 > ⚠️ 已知边界：DHS 的 cordis loader 依赖 Node 内部 API（`node-addon-require-builtin`），
@@ -109,6 +112,10 @@ pnpm install
 
 # 构建 DHS（首次需要：host lib + client lib + web dist）
 pnpm --filter @deepseek-ai/dsh-root run build
+
+# 提交前自检（先格式化，再检查）
+pnpm format
+pnpm typecheck && pnpm check && pnpm test
 
 # 启动
 pnpm build && pnpm start
@@ -132,18 +139,20 @@ node scripts/apply-exe-icon.mjs   # electron-builder 26 的 exe 图标编辑有�
 
 产物：`release/win-unpacked/`（免安装包，Windows x64）。已发布版本见 **[GitHub Releases](https://github.com/EricXu20266/dsh-gui/releases)**。
 
-打包版结构：`resources/runtime`（捆绑 Node + pnpm）、`resources/dhs`（DHS 源码，不含 node_modules，首次启动向导自动安装）、`resources/dsh-*`（四个独立插件仓库 + 内置 dsh-about）。
+打包版结构：`resources/runtime`（捆绑 Node + pnpm）、`resources/dhs`（DHS 源码种子，不含 node_modules）、`resources/dsh-*`（四个独立插件仓库 + 内置 dsh-about）。首次启动向导会把 DHS 源码复制到 `%APPDATA%/dsh-gui/dhs`（macOS 为 `~/Library/Application Support/dsh-gui/dhs`）后再安装依赖，避免写入应用资源目录。
 
 ## 目录结构
 
 ```
 dsh-gui/
-├── electron/        # GUI 壳引擎（main/preload/renderer/安装向导）
+├── electron/        # GUI 壳引擎（main/host/installer/proxy/paths/tray/preload/renderer）
 ├── plugins/         # 内置插件（dsh-about；其余 4 个为独立仓库）
+├── mac-packing-resource/  # 4 个外置插件源码（mac CI 单仓库打包用）
 ├── platform/        # 平台适配（windows 打包 / macos 预留）
 ├── resources/       # 资源（图标、打包运行时：捆绑 Node + pnpm）
 ├── install/         # 安装器配置
 ├── scripts/         # 构建/打包脚本
+├── tests/           # 单元测试（node:test + tsx）
 ├── tools/           # 辅助工具
 └── docs/            # 文档体系（ARCHITECT/DEV-TRACKER/index...）
 ```

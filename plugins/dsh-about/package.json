@@ -19,21 +19,13 @@
     "./package.json": "./package.json"
   },
   "license": "MIT",
-  "files": [
-    "lib",
-    "client",
-    "cordis.patch.yml",
-    "README.md"
-  ],
+  "files": ["lib", "client", "cordis.patch.yml", "README.md"],
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
     },
     "client": {
-      "inject": [
-        "@deepseek-ai/dsh-client-runtime",
-        "@deepseek-ai/dsh-client-locale"
-      ],
+      "inject": ["@deepseek-ai/dsh-client-runtime", "@deepseek-ai/dsh-client-locale"],
       "platform": "web"
     }
   },

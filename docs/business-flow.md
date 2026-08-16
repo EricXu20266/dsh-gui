@@ -9,7 +9,7 @@
 Electron BrowserWindow（DHS web UI）
   │ HTTP POST /api/session.prompt（四象限 ClientRequest）
   ▼
-DHS host 子进程（127.0.0.1:3080）
+DHS host 子进程（127.0.0.1:<动态端口>）
   │ api-proxy → Agent → LLM（DeepSeek API）
   │ 事件流（assistant/message 等）经 WebSocket 下行
   ▼
@@ -20,14 +20,26 @@ Electron 窗口实时渲染回复
 
 ```
 Electron main（app.whenReady）
-  │ spawn('node', ['apps/cli/lib/bin.js', '--profile', 'web'])
+  │ 单实例锁 → resolve DHS root（打包版优先 userData/dhs）
   ▼
-DHS host 子进程（boot cordis 树 → webserver 起 127.0.0.1:3080）
-  │ waitForPort(3080) 轮询就绪
+spawn(node, [apps/cli/lib/bin.js, --profile web, --port 0])
   ▼
-BrowserWindow loadURL('http://127.0.0.1:3080')
+DHS host 子进程（boot cordis 树 → webserver 起 127.0.0.1:<OS 分配端口>）
+  │ 解析 stdout 的 `dsh web: http://127.0.0.1:<port>` 作为就绪信号
+  ▼
+BrowserWindow loadURL('http://127.0.0.1:<port>')
   ▼
 DHS web UI 渲染（会话列表/对话/工具面板）
+```
+
+## 单实例链路
+
+```
+第二个 dsh-gui 实例启动
+  ▼
+app.requestSingleInstanceLock() 失败 → 立即退出
+  ▼
+第一个实例收到 second-instance 事件 → 唤起主窗口（安装期则唤起向导）
 ```
 
 ## 配置链路
@@ -43,11 +55,31 @@ web / gui 双模式共用（下一次 host boot 生效）
 ## 退出链路
 
 ```
-window-all-closed / before-quit
+托盘「退出」/ 系统退出（Cmd+Q 等）
   ▼
-hostProc.kill()（host 子进程随应用退出）
+before-quit：isQuitting = true
   ▼
-app.quit()
+stopHost(hostProc) + killTrackedChildren()（host 与安装类子进程随应用退出）
+  ▼
+窗口 close 放行 → window-all-closed → app.quit()
+```
+
+## 首次安装链路
+
+```
+打包版启动 → 单实例锁 → DHS 依赖未就绪
+  ▼
+打开安装向导（下载源/代理/语言）
+  ▼
+resources/dhs（只读种子）复制到 userData/dhs
+  ▼
+pnpm install（ndjson 真实进度，失败自动重试 3 次）
+  ▼
+dsh --version 内核可运行性校验 → 打包版写 .dsh-install-ok 标记（开发态不写内核仓库）
+  ▼
+安装 5 个内置插件（discovery/skillmanager/mcpmanager/proxy/about）
+  ▼
+向导关闭 → launchMain
 ```
 
 ## 关键不变量

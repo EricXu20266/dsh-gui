@@ -1,3 +1,5 @@
+import { copyFileSync, mkdirSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
 /**
  * dsh-gui 构建 —— esbuild bundle：
  *  - main.cjs  主进程（main.ts）
@@ -6,11 +8,12 @@
  * main.ts 仅依赖 electron + node 内置模块，打包干净；不涉及 DHS 包
  * （host 以子进程方式运行，无需 bundle cordis 相关）
  */
-import { build } from 'esbuild'
-import { copyFileSync, mkdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { build } from 'esbuild';
 
-const root = join(import.meta.dirname, '..')
+const root = join(import.meta.dirname, '..');
+
+// 先清空 dist，避免模块拆分/改名后残留旧 bundle
+rmSync(join(root, 'dist'), { recursive: true, force: true });
 
 await build({
   entryPoints: ['electron/main.ts'],
@@ -21,7 +24,7 @@ await build({
   outfile: 'dist/main.cjs',
   external: ['electron'],
   logLevel: 'info',
-})
+});
 
 await build({
   entryPoints: ['electron/preload.ts'],
@@ -32,12 +35,12 @@ await build({
   outfile: 'dist/preload.js',
   external: ['electron'],
   logLevel: 'info',
-})
+});
 
 // 复制向导页面（首次安装向导）到 dist/renderer/
-const rendererOut = join(root, 'dist', 'renderer')
-mkdirSync(rendererOut, { recursive: true })
+const rendererOut = join(root, 'dist', 'renderer');
+mkdirSync(rendererOut, { recursive: true });
 copyFileSync(
   join(root, 'electron', 'renderer', 'setup-wizard.html'),
   join(rendererOut, 'setup-wizard.html'),
-)
+);

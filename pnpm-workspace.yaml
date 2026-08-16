@@ -13,32 +13,22 @@ packages:
   - "../deepseek-harness/examples"
   - "../deepseek-harness/python/sdk-runtime"
 
-linkWorkspacePackages: true
-
-# 复制自 deepseek-harness/pnpm-workspace.yaml（link: 路径按 workspace 根 dsh-gui 解析，需指回 DHS 仓库）
-overrides:
-  '@deepseek-ai/cosmokit': 'link:../deepseek-harness/vendor/cosmokit'
-  '@deepseek-ai/schemastery': 'link:../deepseek-harness/vendor/schemastery'
-  # electron-builder 26.15.3 声明 @electron/get@^3 但代码用了 5.x 的 ElectronDownloadCacheMode
-  # （@electron/get@3 无此导出 → resolveCacheMode 崩溃），强制 5.1.0
-  '@electron/get': '^5.1.0'
-
-peerDependencyRules:
-  allowedVersions:
-    typescript: '>=5 <7'
-
 # 原生模块构建脚本白名单（pnpm 10+ strictDepBuilds 默认拒绝一切 install/build 脚本）
 allowBuilds:
-  esbuild: true
-  lefthook: true
-  node-pty: true
-  electron: true
+  '@biomejs/biome': true
+  # 裸包名即可匹配 file: 工作区依赖；写 name@file:... 会被 pnpm 11 当作非法版本联合
+  '@deepseek-ai/dsh-subprocess-local': true
   '@google/genai': false
-  protobufjs: false
-  node-addon-require-builtin: false
-  koffi: true
-  '@deepseek-ai/dsh-subprocess-local@file:../deepseek-harness/packages/subprocess/subprocess-local': true
+  electron: true
   electron-winstaller: true
+  esbuild: true
+  koffi: true
+  lefthook: true
+  node-addon-require-builtin: false
+  node-pty: true
+  protobufjs: false
+
+linkWorkspacePackages: true
 
 minimumReleaseAgeExclude:
   - '@earendil-works/pi-ai@0.82.1'
@@ -52,5 +42,17 @@ minimumReleaseAgeExclude:
   - node-addon-require-builtin-win32-x64-msvc@0.1.4
   - node-addon-require-builtin@0.1.4
 
+# 复制自 deepseek-harness/pnpm-workspace.yaml（link: 路径按 workspace 根 dsh-gui 解析，需指回 DHS 仓库）
+overrides:
+  '@deepseek-ai/cosmokit': 'link:../deepseek-harness/vendor/cosmokit'
+  '@deepseek-ai/schemastery': 'link:../deepseek-harness/vendor/schemastery'
+  # electron-builder 26.15.3 声明 @electron/get@^3 但代码用了 5.x 的 ElectronDownloadCacheMode
+  # （@electron/get@3 无此导出 → resolveCacheMode 崩溃），强制 5.1.0
+  '@electron/get': '^5.1.0'
+
 patchedDependencies:
   node-pty@1.1.0: ../deepseek-harness/patches/node-pty@1.1.0.patch
+
+peerDependencyRules:
+  allowedVersions:
+    typescript: '>=5 <7'

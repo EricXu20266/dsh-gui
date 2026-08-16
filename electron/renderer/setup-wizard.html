@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
 <title>dsh-gui Setup</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -193,6 +194,7 @@ const I18N = {
 
 let lang = 'zh'
 let state = { step: 1, installing: false }
+let verifyChecks = null
 const RADIO = { npmmirror: 'https://registry.npmmirror.com', npmjs: 'https://registry.npmjs.org' }
 
 function t(key, ...args) {
@@ -259,6 +261,15 @@ $('proxyInput').oninput = () => {
   if ($('proxyInput').value.trim()) $('useSystemProxy').checked = false
 }
 
+/** 按主进程返回的真实校验结果显示第 4 步对勾 */
+function applyVerifyChecks(checks) {
+  const map = { ck1: checks.deps, ck2: checks.bin, ck3: checks.node }
+  for (const [id, ok] of Object.entries(map)) {
+    $(id).classList.toggle('on', ok === true)
+    $(id).querySelector('.mark').textContent = ok === true ? '✓' : '×'
+  }
+}
+
 async function startInstall() {
   const src = document.querySelector('input[name=src]:checked').value
   const config = { registry: RADIO[src] || RADIO.npmjs, proxy: '', useSystemProxy: false, locale: lang }
@@ -268,17 +279,19 @@ async function startInstall() {
     if (!config.useSystemProxy && !config.proxy) { $('srcErr').textContent = t('errProxyRequired'); return }
   }
   state.installing = true
+  verifyChecks = null
   go(3)
   $('dlWarn').textContent = t('dlWarn')
   const off = window.setupAPI.onProgress((p) => {
     $('bar').style.width = p.percent + '%'
     $('pct').textContent = p.percent + '%'
     $('phase').textContent = p.message
+    if (p.checks) verifyChecks = p.checks
   })
   try {
     const res = await window.setupAPI.startInstall(config)
     off()
-    if (res.ok) { go(4); setTimeout(runVerify, 400) }
+    if (res.ok) { go(4); runVerify() }
     else {
       state.installing = false
       $('btnNext').textContent = t('next')
@@ -294,11 +307,14 @@ async function startInstall() {
   }
 }
 
-async function runVerify() {
-  for (const id of ['ck1', 'ck2', 'ck3']) { $(id).classList.add('on'); await new Promise((r) => setTimeout(r, 500)) }
-  await new Promise((r) => setTimeout(r, 800))
-  go(5)
-  setTimeout(() => window.close(), 1500)
+function runVerify() {
+  // 主进程在安装完成前已通过 setup:progress 下发 checks；这里只做短过渡，不再伪造逐项通过动画
+  if (verifyChecks) applyVerifyChecks(verifyChecks)
+  else applyVerifyChecks({ deps: true, bin: true, node: true }) // 兼容旧主进程：res.ok 本身即代表三项校验通过
+  setTimeout(() => {
+    go(5)
+    setTimeout(() => window.close(), 1500)
+  }, 600)
 }
 </script>
 </body>

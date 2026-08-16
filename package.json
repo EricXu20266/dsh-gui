@@ -2,17 +2,32 @@
   "name": "dsh-gui",
   "version": "0.2.0",
   "private": true,
-  "description": "DHS (DeepSeek Harness) Electron GUI client — webui → gui, in-process host, kernel untouched",
+  "description": "DHS (DeepSeek Harness) Electron GUI client — webui → gui, host runs as a subprocess, kernel untouched",
   "type": "module",
   "main": "dist/main.cjs",
   "author": "Eric Xu",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EricXu20266/dsh-gui.git"
+  },
+  "homepage": "https://github.com/EricXu20266/dsh-gui#readme",
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@11.0.0",
   "scripts": {
     "build": "node scripts/build-main.mjs",
     "start": "electron .",
     "dev": "node scripts/build-main.mjs && electron .",
     "package": "pnpm build && electron-builder --win nsis && node scripts/apply-exe-icon.mjs",
     "package:dir": "pnpm build && electron-builder --win dir && node scripts/apply-exe-icon.mjs",
-    "icons": "node scripts/gen-icons.mjs"
+    "icons": "node scripts/gen-icons.mjs",
+    "check": "biome check .",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "tsx --test tests/proxy.test.ts"
   },
   "build": {
     "appId": "com.eric.dshgui",
@@ -22,10 +37,7 @@
     "directories": {
       "output": "release"
     },
-    "files": [
-      "dist/**/*",
-      "resources/icon/**"
-    ],
+    "files": ["dist/**/*", "resources/icon/**"],
     "extraResources": [
       {
         "from": "resources/runtime/node",
@@ -47,13 +59,7 @@
       {
         "from": "../deepseek-harness",
         "to": "dhs",
-        "filter": [
-          "**/*",
-          "!**/node_modules/**",
-          "!**/.git/**",
-          "!**/tmp/**",
-          "!**/*.log"
-        ]
+        "filter": ["**/*", "!**/node_modules/**", "!**/.git/**", "!**/tmp/**", "!**/*.log"]
       },
       {
         "from": "mac-packing-resource/dsh-discovery",
@@ -131,15 +137,11 @@
       "target": [
         {
           "target": "dmg",
-          "arch": [
-            "arm64"
-          ]
+          "arch": ["arm64"]
         },
         {
           "target": "zip",
-          "arch": [
-            "arm64"
-          ]
+          "arch": ["arm64"]
         }
       ]
     },
@@ -149,9 +151,7 @@
       "target": [
         {
           "target": "nsis",
-          "arch": [
-            "x64"
-          ]
+          "arch": ["x64"]
         }
       ]
     },
@@ -161,16 +161,19 @@
     }
   },
   "devDependencies": {
+    "@biomejs/biome": "1.9.4",
     "@deepseek-ai/dsh-app-boot": "workspace:^",
     "@deepseek-ai/dsh-host-apiproxy": "workspace:^",
     "@deepseek-ai/dsh-web-app": "workspace:^",
-    "biome": "^0.3.3",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^24.0.0",
     "electron": "^43.4.0",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
     "js-yaml": "^5.3.0",
     "png-to-ico": "^3.0.2",
     "sharp": "^0.35.3",
-    "tsx": "^4.23.12"
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.0"
   }
 }

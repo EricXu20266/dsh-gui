@@ -26,13 +26,15 @@ Download, unzip, and run — double-click `dsh-gui.exe` to launch. The first lau
 
 ## Features
 
-- **Native desktop experience**: standalone window, system tray (minimize-to-tray on X, quit from tray context menu), DeepSeek blue-whale icon
-- **First-run setup wizard**: 5-step flow (welcome → download source → download progress → check → done), China mirror / official source / system proxy selectable, real progress shown throughout
+- **Native desktop experience**: standalone window, system tray (minimize-to-tray on X, quit from tray context menu), single-instance lock, DeepSeek blue-whale icon
+- **Dynamic port**: the host starts with `dsh web --port 0`; the GUI parses the readiness URL and loads it, avoiding port-3080 conflicts
+- **First-run setup wizard**: 5-step flow (welcome → download source → download progress → real verification → done), China mirror / official source / system proxy selectable, real progress shown throughout
 - **Bundled distribution**: the packaged build bundles Node + pnpm + DHS source + built-in plugins; first launch auto-installs dependencies — out of the box
 - **Built-in plugin system**: 5 bundled plugins (plugin discovery / Skill manager / MCP manager / global proxy / About) covering DHS's daily management and extension — see below
 - **Plugin agent awareness**: every built-in plugin registers a `systemPrompt` section with the host, so the model is aware of installed plugins and what they do each session — no manual prompting needed
 - **Global proxy**: configure system proxy / manual proxy graphically in Settings; the GUI injects environment variables at launch so the whole DHS chain (LLM calls / built-in search / MCP client) goes through the proxy
 - **Bilingual zh/en**: UI language follows the system, switchable manually, and mapped to DHS kernel `locale.preference` (kernel UI follows)
+- **Security baseline**: the main window may only navigate to the local host origin; external links open in the system browser; dangerous permissions are denied by default; the wizard page ships a CSP
 - **Install logs**: the full install process is written to `%APPDATA%/dsh-gui/install.log` for failure tracing
 - **Zero kernel changes**: the DHS kernel stays officially untouched; the GUI is only a shell
 
@@ -88,14 +90,15 @@ Every built-in plugin registers a `systemPrompt` section on the host side (`plug
 │  main process ──spawn──> DHS host subprocess │
 │     │                    └─ apps/cli/bin.js  │
 │     │                        --profile web   │
-│     │                        → 127.0.0.1:3080│
+│     │                        --port 0        │
+│     │                        → 127.0.0.1:<p> │
 │  BrowserWindow loadURL ←─────────────────────┘
 └─────────────────────────────────────────────┘
 ```
 
-- **GUI shell**: Electron (window, tray, process management, setup wizard)
+- **GUI shell**: Electron (window, tray, process management, setup wizard, single-instance lock)
 - **DHS host**: runs the official `dsh` as a subprocess (bundled Node 24 in packaged builds, system Node in dev), kernel 100% untouched
-- **Communication**: local HTTP + WebSocket (`127.0.0.1:3080`)
+- **Communication**: local HTTP + WebSocket (`127.0.0.1`; the port is assigned dynamically via `--port 0`, avoiding conflicts with an already-running DHS on 3080)
 - **Config**: `~/.dsh` (shared DHS home, used by both web and GUI modes)
 
 > ⚠️ Known boundary: DHS's cordis loader depends on a Node internal API (`node-addon-require-builtin`),
@@ -109,6 +112,10 @@ pnpm install
 
 # Build DHS (first time only: host lib + client lib + web dist)
 pnpm --filter @deepseek-ai/dsh-root run build
+
+# Pre-commit checks (format first, then check)
+pnpm format
+pnpm typecheck && pnpm check && pnpm test
 
 # Launch
 pnpm build && pnpm start
@@ -132,18 +139,20 @@ node scripts/apply-exe-icon.mjs   # electron-builder 26 has a silent exe-icon bu
 
 Artifacts: `release/win-unpacked/` (portable, Windows x64). Released versions: **[GitHub Releases](https://github.com/EricXu20266/dsh-gui/releases)**.
 
-Packaged-build layout: `resources/runtime` (bundled Node + pnpm), `resources/dhs` (DHS source, no node_modules — the first-run wizard installs them), `resources/dsh-*` (four standalone plugin repos + built-in dsh-about).
+Packaged-build layout: `resources/runtime` (bundled Node + pnpm), `resources/dhs` (DHS source seed, no node_modules), `resources/dsh-*` (four standalone plugin repos + built-in dsh-about). On first run the wizard copies the DHS source to `%APPDATA%/dsh-gui/dhs` (macOS: `~/Library/Application Support/dsh-gui/dhs`) before installing dependencies, so the app never writes into its own Resources directory.
 
 ## Directory layout
 
 ```
 dsh-gui/
-├── electron/        # GUI shell engine (main/preload/renderer/setup wizard)
+├── electron/        # GUI shell engine (main/host/installer/proxy/paths/tray/preload/renderer)
 ├── plugins/         # built-in plugins (dsh-about; the other 4 are standalone repos)
+├── mac-packing-resource/  # sources of the 4 external plugins for single-repo macOS CI packaging
 ├── platform/        # platform adapters (windows packaging / macos reserved)
 ├── resources/       # assets (icon, packaging runtime: bundled Node + pnpm)
 ├── install/         # installer config
 ├── scripts/         # build/package scripts
+├── tests/           # unit tests (node:test + tsx)
 ├── tools/           # helper tools
 └── docs/            # docs system (ARCHITECT/DEV-TRACKER/index...)
 ```

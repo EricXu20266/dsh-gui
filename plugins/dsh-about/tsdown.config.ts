@@ -4,12 +4,12 @@
  * window.__ModuleLoader__.load({ id, factory }) and resolves externals through
  * the injected require. All styles are inline.
  */
-import { defineConfig } from 'tsdown'
+import { defineConfig } from 'tsdown';
 
-const id = 'dsh-about'
+const id = 'dsh-about';
 
 /** Externals resolved from the loader module table at runtime. */
-const CLIENT_EXTERNALS = ['react', 'react/jsx-runtime']
+const CLIENT_EXTERNALS = ['react', 'react/jsx-runtime'];
 
 export default defineConfig({
   entry: { client: 'src/client/index.ts' },
@@ -33,4 +33,4 @@ export default defineConfig({
     footer: 'return module.exports; } });',
     intro: 'var module = { exports: {} }; var exports = module.exports;',
   },
-})
+});

@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## [Unreleased]
+
+### Fixed（2026-08-16 全量代码审查整改）
+- 修复 `biome` 依赖装成旧环境变量工具的问题，改用 `@biomejs/biome`
+- 移除开发态硬编码 `E:\AllinDeepSeek\deepseek-harness`
+- 修复重复 `window-all-closed` / `before-quit` 监听及向导完成后的退出竞态
+- host 改用 `dsh web --port 0` 动态端口，增加单实例锁
+- 打包版安装到 `userData/dhs`，不再写 `.app/Resources`
+- 安装完成标记 + `dsh --version` 校验，5 个插件全部自动注册
+- 向导校验步骤改为真实检查结果，进度/错误文案跟随中英语言
+- settings.yaml 原子写入，YAML 损坏时不覆盖用户配置
+- 主窗口安全基线（will-navigate / permission handler / CSP）
+- 增加 tsconfig、typecheck、单测与 lint/format 脚本
+- 修复 pnpm 11 报 `ERR_PNPM_INVALID_VERSION_UNION`：`allowBuilds` 中 `name@file:` 键改为裸包名
+
+## [0.2.0] - 2026-08-15
+
+### Added
+- 首次安装向导（5 步：下载源 → 真实进度 → 校验 → 完成）
+- 系统托盘、5 个内置插件捆绑分发（discovery / skillmanager / mcpmanager / proxy / about）
+- Windows win-unpacked 与 macOS arm64（CI）打包
+- 全局代理注入、中英双语、安装日志
+
 ## [0.1.0] - 2026-08-15
 
 ### Added

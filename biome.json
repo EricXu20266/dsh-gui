@@ -1,5 +1,6 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "organizeImports": { "enabled": true },
   "linter": { "enabled": true, "rules": { "recommended": true } },
   "formatter": {
@@ -10,5 +11,21 @@
   },
   "javascript": {
     "formatter": { "quoteStyle": "single", "trailingCommas": "all" }
-  }
+  },
+  "overrides": [
+    {
+      "include": [
+        "dist/**",
+        "release/**",
+        "tmp/**",
+        "vendor/**",
+        "mac-packing-resource/**",
+        "plugins/dsh-about/lib/**",
+        "plugins/dsh-about/client/**",
+        "resources/runtime/**"
+      ],
+      "linter": { "enabled": false },
+      "formatter": { "enabled": false }
+    }
+  ]
 }

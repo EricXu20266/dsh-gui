@@ -49,6 +49,14 @@ jobs:
         working-directory: dsh-gui
         run: pnpm install --no-frozen-lockfile
 
+      - name: Typecheck & tests
+          working-directory: dsh-gui
+        run: pnpm typecheck && pnpm test
+
+      - name: Lint
+          working-directory: dsh-gui
+        run: pnpm check
+
       # resources/runtime/ 整体被 .gitignore（本地手工准备的运行时产物）→ CI 需自取：
       # 1) pnpm standalone（npm registry tarball，dist/node_modules 内置全平台依赖）
       # 2) Electron darwin-arm64 二进制（electron 43+ 无 postinstall，脚本改名 install-electron，

@@ -11,7 +11,7 @@ export const zh = {
   electronTitle: 'Electron',
   nodeTitle: 'Node',
   platformTitle: '平台',
-} as const
+} as const;
 
 /** dsh-about settings-row copy (en). */
 export const en = {
@@ -26,4 +26,4 @@ export const en = {
   electronTitle: 'Electron',
   nodeTitle: 'Node',
   platformTitle: 'Platform',
-} as const
+} as const;

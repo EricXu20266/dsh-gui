@@ -28,11 +28,20 @@ dsh-gui/
 ├── biome.json                 # Lint + Format 配置
 ├── DSH-GUI.md                 # 本文件 — L2 宪法
 ├── electron/                  # GUI 壳引擎（核心）
-│   ├── main.ts                # 主进程：spawn DHS host + 窗口生命周期
-│   ├── preload.ts             # preload 桥（IPC 载体，P1 启用）
-│   └── renderer/              # 渲染层（自绘 UI，预留）
+│   ├── main.ts                # 主进程：单实例 + spawn DHS host + 窗口生命周期
+│   ├── preload.ts             # preload 桥（安装向导 IPC）
+│   ├── host.ts                # host 子进程：--port 0 动态端口 + 就绪信号解析
+│   ├── installer.ts           # 首次安装：userData/dhs + pnpm 进度 + 5 插件注册
+│   ├── paths.ts               # DHS root / Node / pnpm / 版本 env / 安装标记
+│   ├── proxy.ts               # 系统代理读取 + settings.yaml 原子写入
+│   ├── tray.ts                # 系统托盘
+│   ├── child-process.ts       # 安装类子进程托管
+│   ├── log.ts                 # 安装日志（控制台 + 落盘）
+│   ├── types.ts               # 主进程 / preload / 向导共享类型
+│   └── renderer/              # 渲染层（首次安装向导，含 CSP）
 ├── plugins/
-│   └── dsh-discovery/         # 自研 DHS 插件：插件搜索器（浏览 GitHub 社区插件）
+│   └── dsh-about/             # 内置插件：设置页「关于」tab
+├── mac-packing-resource/      # 4 个外置插件源码（供远程 mac CI 单仓库打包）
 ├── platform/
 │   ├── windows/               # Windows 打包（electron-builder 配置）
 │   └── macos/                 # 预留
@@ -54,6 +63,9 @@ dsh-gui/
 │   └── archive/               # 历史归档
 ├── package.json               # pnpm workspace 根（包含 ../deepseek-harness）
 ├── pnpm-workspace.yaml        # workspace 配置（DHS 并入）
+├── tsconfig.json              # typecheck 配置（electron + tests）
+├── tests/                     # 单元测试（node:test + tsx）
+├── LICENSE                    # MIT
 ├── tmp/（运行时生成，gitignore）
 └── dist/（构建产物，gitignore）
 ```
@@ -86,7 +98,7 @@ dsh-gui/
 | 环境 | 用途 | 运行位置 | 配置 |
 |------|------|----------|------|
 | DEV  | 日常开发 | 本地机器 | `~/.dsh`（DHS home，web/gui 共用）|
-| PROD | 最终用户 | 用户机器 | 捆绑 node + 打包分发（P1）|
+| PROD | 最终用户 | 用户机器 | 捆绑 node + 打包分发；DHS 运行环境装在 userData/dhs |
 
 > DHS 的配置（API key、模型、profile）统一在 `~/.dsh`，GUI 与 web 模式共用一份。
 
@@ -127,8 +139,9 @@ main（稳定） ←── feature/*（开发，--no-ff 合并）
 
 | 检查 | 命令 | 不通过的后果 |
 |------|------|-------------|
-| typecheck | `pnpm exec tsc --noEmit -p tsconfig.json`（如配置） | 拒绝 commit |
-| lint | `pnpm exec biome check .` | 先 `--write` 修复，修不了拒绝 commit |
+| typecheck | `pnpm typecheck`（tsc --noEmit -p tsconfig.json） | 拒绝 commit |
+| lint | `pnpm check`（@biomejs/biome） | 先 `pnpm format` 修复，修不了拒绝 commit |
+| 单测 | `pnpm test` | 拒绝 commit |
 | 运行验证 | `pnpm start`（窗口拉起 + host 就绪） | 拒绝 commit |
 
 **任何一项不通过 → 禁止 commit。**
@@ -146,10 +159,10 @@ main（稳定） ←── feature/*（开发，--no-ff 合并）
 |------|------|------|
 | 编辑器 | VS Code | 推荐 |
 | 包管理 | pnpm 11 | workspace 根 |
-| 代码格式化 | Biome | lint + format 一体 |
+| 代码格式化 | Biome（`@biomejs/biome` 1.9.4） | lint + format 一体，注意不要装成旧 `biome` 包 |
 | 构建 | esbuild | main 进程 bundle |
-| 打包 | electron-builder | P1 |
-| 运行时 | Node 24 + Electron 43 | 系统 Node 跑 DHS host |
+| 打包 | electron-builder | win-unpacked + mac arm64（CI） |
+| 运行时 | Node 24 + Electron 43 | 开发态系统 Node 跑 DHS host；打包版捆绑 Node |
 
 ---
 
@@ -171,3 +184,4 @@ main（稳定） ←── feature/*（开发，--no-ff 合并）
 | 2026-08-15 | 初始创建（P0 完成：webui→gui + 对话链路全通） | POC 验收通过 |
 | 2026-08-15 | 自研 dsh-discovery 插件搜索器（浏览/搜索/已安装标识/检查更新/中英搜索） | 替代第三方 dshmarket |
 | 2026-08-15 | 宪法补充「内核依赖：deepseek-harness（原始仓库）」说明（本地路径/官方远程/master 分支/升级方式） | 明确内核仓库关系与升级路径 |
+| 2026-08-16 | 全量代码审查整改：模块拆分（paths/proxy/installer/host/tray）、单实例、动态端口、userData 安装、5 插件安装、真实校验、i18n 进度、安全基线、Biome/tsconfig/测试 | 消除打包/退出竞态与文档漂移 |
