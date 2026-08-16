@@ -127,21 +127,29 @@ pnpm build && pnpm start
 
 ## Packaging
 
+### Windows (local build)
+
 One-click script (recommended; full console output):
 
 ```bat
 build-win-unpacked.bat
 ```
 
-Or manually:
+Or manually (package.json scripts):
 
 ```bash
-pnpm build
-pnpm exec electron-builder --win dir
-node scripts/apply-exe-icon.mjs   # electron-builder 26 has a silent exe-icon bug; embed it manually
+pnpm package:dir   # portable build → release/win-unpacked/
+pnpm package       # nsis installer → release/dsh-gui-setup-*.exe
 ```
 
-Artifacts: `release/win-unpacked/` (portable, Windows x64). Released versions: **[GitHub Releases](https://github.com/EricXu20266/dsh-gui/releases)**.
+Released versions: **[GitHub Releases](https://github.com/EricXu20266/dsh-gui/releases)**.
+
+### macOS (CI build)
+
+macOS ARM64 packages cannot be produced on Windows (the Electron darwin-arm64 binary and native-module ABIs must be fetched/rebuilt in a macOS environment); they are built by GitHub Actions:
+
+1. Open [Actions → build-mac-arm64](https://github.com/EricXu20266/dsh-gui/actions/workflows/build-mac-arm64.yml) → **Run workflow** (manual trigger; pushes do not auto-run, to save Actions minutes)
+2. When done, download `dsh-gui-mac-arm64` from the workflow run's Artifacts (contains `release/*.dmg` + `release/*.zip`, arm64) and publish it to GitHub Releases
 
 Packaged-build layout: `resources/runtime` (bundled Node + pnpm), `resources/dhs` (DHS source seed, no node_modules), `resources/dsh-*` (four standalone plugin repos + built-in dsh-about). On first run the wizard copies the DHS source to `%APPDATA%/dsh-gui/dhs` (macOS: `~/Library/Application Support/dsh-gui/dhs`) before installing dependencies, so the app never writes into its own Resources directory.
 

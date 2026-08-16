@@ -127,21 +127,29 @@ pnpm build && pnpm start
 
 ## 打包分发
 
+### Windows（本地打包）
+
 一键脚本（推荐，输出全程 console）：
 
 ```bat
 build-win-unpacked.bat
 ```
 
-或手动：
+或手动（package.json 脚本）：
 
 ```bash
-pnpm build
-pnpm exec electron-builder --win dir
-node scripts/apply-exe-icon.mjs   # electron-builder 26 的 exe 图标编辑有静默 bug，需手动嵌入
+pnpm package:dir   # 免安装包 → release/win-unpacked/
+pnpm package       # nsis 安装包 → release/dsh-gui-setup-*.exe
 ```
 
-产物：`release/win-unpacked/`（免安装包，Windows x64）。已发布版本见 **[GitHub Releases](https://github.com/EricXu20266/dsh-gui/releases)**。
+产物见 **[GitHub Releases](https://github.com/EricXu20266/dsh-gui/releases)**。
+
+### macOS（CI 打包）
+
+macOS ARM64 包无法在 Windows 本地产出（Electron darwin-arm64 二进制与原生模块 ABI 需在 macOS 环境获取/重编），由 GitHub Actions 构建：
+
+1. 打开 [Actions → build-mac-arm64](https://github.com/EricXu20266/dsh-gui/actions/workflows/build-mac-arm64.yml) → **Run workflow**（手动触发，push 不自动跑，避免浪费 Actions minutes）
+2. 完成后在 workflow run 的 Artifacts 下载 `dsh-gui-mac-arm64`（含 `release/*.dmg` + `release/*.zip`，arm64），发布到 GitHub Releases
 
 打包版结构：`resources/runtime`（捆绑 Node + pnpm）、`resources/dhs`（DHS 源码种子，不含 node_modules）、`resources/dsh-*`（四个独立插件仓库 + 内置 dsh-about）。首次启动向导会把 DHS 源码复制到 `%APPDATA%/dsh-gui/dhs`（macOS 为 `~/Library/Application Support/dsh-gui/dhs`）后再安装依赖，避免写入应用资源目录。
 
