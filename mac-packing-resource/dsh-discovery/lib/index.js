@@ -6,6 +6,7 @@ export const name = 'dsh-discovery';
 /** 内置 bundle 插件（非用户安装），已安装标识中排除。 */
 const BUILTIN_PLUGINS = new Set([
     '@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', '@deepseek-ai/dsh-headless',
+    'dsh-about', // dsh-gui 内置组件（设置→关于），随 GUI 发布，不走插件更新
 ]);
 /** 当前激活 profile 名（host 启动 argv：node bin.js --profile <name>）。 */
 function resolveProfileName() {
