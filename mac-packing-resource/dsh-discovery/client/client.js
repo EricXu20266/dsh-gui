@@ -13,6 +13,8 @@ window.__ModuleLoader__.load({
 			searchPh: "搜索插件，比如：通知、终端、记忆…",
 			all: "全部",
 			empty: "没有匹配的插件",
+			searchingOnline: "插件列表中无匹配，正在 GitHub 全网搜索…",
+			searchOnlineResults: "GitHub 在线搜索结果 {n} 条（含 topic 索引尚未收录的最新仓库）",
 			loadFail: "插件列表加载失败，请稍后重试",
 			viewRepo: "查看仓库",
 			openOnGitHub: "在 GitHub 打开",
@@ -78,6 +80,8 @@ window.__ModuleLoader__.load({
 			searchPh: "Search plugins: notify, terminal, memory…",
 			all: "All",
 			empty: "No matching plugins",
+			searchingOnline: "No match in the plugin list, searching GitHub…",
+			searchOnlineResults: "{n} results from GitHub full-text search (includes fresh repos whose topic index lags)",
 			loadFail: "Failed to load plugin list, please retry",
 			viewRepo: "View repository",
 			openOnGitHub: "Open on GitHub",
@@ -766,6 +770,15 @@ window.__ModuleLoader__.load({
 			gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
 			gap: 12
 		};
+		const onlineNoteStyle = {
+			fontSize: 11,
+			lineHeight: "16px",
+			color: "var(--dsw-alias-label-secondary, #7c7c9c)",
+			background: "var(--dsw-alias-bg-layer-2, #1c1c2e)",
+			borderRadius: 8,
+			padding: "6px 12px",
+			marginBottom: 12
+		};
 		const cardStyle = {
 			background: "var(--dsw-alias-bg-layer-1, #1a1a2b)",
 			border: "1px solid var(--dsw-alias-border-l2, #2e2e4a)",
@@ -1407,6 +1420,9 @@ window.__ModuleLoader__.load({
 			const [q, setQ] = (0, react.useState)("");
 			const [cat, setCat] = (0, react.useState)("all");
 			const [preview, setPreview] = (0, react.useState)(null);
+			/** GitHub 全文搜索兜底：本地过滤无结果时触发。null=未搜索；[]=已搜无结果。 */
+			const [searchResults, setSearchResults] = (0, react.useState)(null);
+			const [searching, setSearching] = (0, react.useState)(false);
 			const load = () => {
 				setLoadError(false);
 				const cached = readListingCache();
@@ -1446,6 +1462,29 @@ window.__ModuleLoader__.load({
 				q,
 				cat
 			]);
+			const searchTimer = (0, react.useRef)(void 0);
+			(0, react.useEffect)(() => {
+				const term = q.trim();
+				if (term === "" || plugins.length > 0) {
+					window.clearTimeout(searchTimer.current);
+					setSearchResults(null);
+					setSearching(false);
+					return;
+				}
+				setSearching(true);
+				window.clearTimeout(searchTimer.current);
+				searchTimer.current = window.setTimeout(() => {
+					fetch(`/dsh-discovery/search?q=${encodeURIComponent(term)}`, { cache: "no-store" }).then((res) => {
+						if (!res.ok) throw new Error("HTTP " + String(res.status));
+						return res.json();
+					}).then((body) => setSearchResults(body.plugins ?? [])).catch(() => setSearchResults([])).finally(() => setSearching(false));
+				}, 400);
+				return () => window.clearTimeout(searchTimer.current);
+			}, [
+				q,
+				cat,
+				plugins.length
+			]);
 			const handleReview = (plugin) => {
 				onClose();
 				openSessionAndSend(ctx, buildReviewPrompt(plugin, t));
@@ -1468,6 +1507,15 @@ window.__ModuleLoader__.load({
 				onClose();
 				openSessionAndSend(ctx, buildBulkUpdatePrompt(updates, t));
 			};
+			const fallbackView = plugins.length === 0 && q.trim() !== "" ? searching ? (0, react.createElement)("div", { style: loadingStyle }, t("searchingOnline")) : searchResults !== null && searchResults.length > 0 ? (0, react.createElement)("div", { style: { width: "100%" } }, (0, react.createElement)("div", { style: onlineNoteStyle }, t("searchOnlineResults").replace("{n}", String(searchResults.length))), (0, react.createElement)("div", { style: gridStyle }, searchResults.map((p) => (0, react.createElement)(PluginCard, {
+				key: p.htmlUrl,
+				plugin: p,
+				t,
+				installed: isInstalled(p, installed),
+				onReview: handleReview,
+				onViewRepo: (x) => setPreview(x),
+				onCheckUpdate: handleCheckUpdate
+			})))) : (0, react.createElement)("div", { style: emptyStyle }, t("empty")) : null;
 			return (0, react.createElement)("div", { style: {
 				height: "100%",
 				display: "flex",
@@ -1509,7 +1557,7 @@ window.__ModuleLoader__.load({
 			} }, t("total").replace("{n}", String(listing?.total ?? 0)) + " · " + t("fetchedFrom")), (0, react.createElement)("div", {
 				style: bodyStyle,
 				flex: 1
-			}, loadError && (0, react.createElement)("div", { style: emptyStyle }, t("loadFail") + " — " + t("refresh")), !loadError && listing === null && (0, react.createElement)("div", { style: loadingStyle }, t("loading")), !loadError && listing !== null && plugins.length === 0 && (0, react.createElement)("div", { style: emptyStyle }, t("empty")), !loadError && listing !== null && plugins.length > 0 && (0, react.createElement)("div", { style: gridStyle }, plugins.map((p) => (0, react.createElement)(PluginCard, {
+			}, loadError && (0, react.createElement)("div", { style: emptyStyle }, t("loadFail") + " — " + t("refresh")), !loadError && listing === null && (0, react.createElement)("div", { style: loadingStyle }, t("loading")), !loadError && listing !== null && plugins.length > 0 && (0, react.createElement)("div", { style: gridStyle }, plugins.map((p) => (0, react.createElement)(PluginCard, {
 				key: p.htmlUrl,
 				plugin: p,
 				t,
@@ -1517,7 +1565,7 @@ window.__ModuleLoader__.load({
 				onReview: handleReview,
 				onViewRepo: (x) => setPreview(x),
 				onCheckUpdate: handleCheckUpdate
-			}))))), tab === "scenario" && (0, react.createElement)(ScenarioPanel, {
+			}))), !loadError && listing !== null && fallbackView, !loadError && listing !== null && plugins.length === 0 && q.trim() === "" && (0, react.createElement)("div", { style: emptyStyle }, t("empty")))), tab === "scenario" && (0, react.createElement)(ScenarioPanel, {
 				listing,
 				t,
 				onInstall: handleInstall,
@@ -1681,8 +1729,9 @@ window.__ModuleLoader__.load({
 				ref: closeButton,
 				style: closeStyle,
 				onClick: close,
-				"aria-label": "关闭"
-			}, "✕ 关闭")), (0, react.createElement)("div", { style: {
+				"aria-label": "关闭",
+				title: "关闭"
+			}, "✕")), (0, react.createElement)("div", { style: {
 				flex: 1,
 				overflowY: "hidden",
 				padding: "0 4px"
