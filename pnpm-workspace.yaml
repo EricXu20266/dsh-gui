@@ -51,7 +51,7 @@ overrides:
   '@electron/get': '^5.1.0'
 
 patchedDependencies:
-  node-pty@1.1.0: ../deepseek-harness/patches/node-pty@1.1.0.patch
+  node-pty@1.2.0-beta.15: ../deepseek-harness/patches/node-pty@1.2.0-beta.15.patch
 
 peerDependencyRules:
   allowedVersions:
