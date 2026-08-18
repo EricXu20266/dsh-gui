@@ -918,7 +918,7 @@ window.__ModuleLoader__.load({
 			color: "var(--dsw-static-deepseek-500, #4176E6)"
 		};
 		/** Hover micro-interaction for card / scenario / header buttons (CSS class). */
-		const HOVER_CSS = ".dshd-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.08)) !important;border-color:var(--dsw-alias-brand-primary,#7aa2ff) !important}";
+		const HOVER_CSS = ".dshd-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.08)) !important;border-color:var(--dsw-alias-brand-primary,#7aa2ff) !important}.dshd-update-all:hover{background:#2f5fd0 !important;border-color:#2f5fd0 !important;color:#fff !important}";
 		const tabRowStyle = {
 			display: "flex",
 			gap: 4,
@@ -1683,7 +1683,7 @@ window.__ModuleLoader__.load({
 				flexWrap: "wrap"
 			} }, (0, react.createElement)("button", {
 				type: "button",
-				className: "dshd-btn",
+				className: "dshd-btn dshd-update-all",
 				style: {
 					...cardBtnPrimaryStyle,
 					background: "#4176e6",
