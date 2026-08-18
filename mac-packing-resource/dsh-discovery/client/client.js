@@ -919,6 +919,22 @@ window.__ModuleLoader__.load({
 		};
 		/** Hover micro-interaction for card / scenario / header buttons (CSS class). */
 		const HOVER_CSS = ".dshd-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.08)) !important;border-color:var(--dsw-alias-brand-primary,#7aa2ff) !important}.dshd-update-all:hover{background:#2f5fd0 !important;border-color:#2f5fd0 !important;color:#fff !important}";
+		/** 轻量 toast（面板内提示，2.2s 自动消失，置顶不挡交互）。 */
+		const toastStyle = {
+			position: "fixed",
+			left: "50%",
+			bottom: 48,
+			transform: "translateX(-50%)",
+			background: "rgba(28,28,44,.94)",
+			color: "#e6e6f0",
+			fontSize: 13,
+			padding: "8px 18px",
+			borderRadius: 8,
+			zIndex: 1200,
+			boxShadow: "0 8px 24px rgba(0,0,0,.35)",
+			whiteSpace: "nowrap",
+			pointerEvents: "none"
+		};
 		const tabRowStyle = {
 			display: "flex",
 			gap: 4,
@@ -1440,6 +1456,13 @@ window.__ModuleLoader__.load({
 			/** GitHub 全文搜索兜底：本地过滤无结果时触发。null=未搜索；[]=已搜无结果。 */
 			const [searchResults, setSearchResults] = (0, react.useState)(null);
 			const [searching, setSearching] = (0, react.useState)(false);
+			const [toast, setToast] = (0, react.useState)(null);
+			const toastTimer = (0, react.useRef)(void 0);
+			const showToast = (text) => {
+				setToast(text);
+				window.clearTimeout(toastTimer.current);
+				toastTimer.current = window.setTimeout(() => setToast(null), 2200);
+			};
 			const load = () => {
 				setLoadError(false);
 				const cached = readListingCache();
@@ -1520,7 +1543,10 @@ window.__ModuleLoader__.load({
 			};
 			const handleUpdateAll = () => {
 				const updates = (installedVersions ?? []).filter((p) => p.hasUpdate);
-				if (updates.length === 0) return;
+				if (updates.length === 0) {
+					showToast(t("updateEmpty"));
+					return;
+				}
 				onClose();
 				openSessionAndSend(ctx, buildBulkUpdatePrompt(updates, t));
 			};
@@ -1596,7 +1622,7 @@ window.__ModuleLoader__.load({
 				plugin: preview,
 				t,
 				onClose: () => setPreview(null)
-			}));
+			}), toast !== null && (0, react.createElement)("div", { style: toastStyle }, toast));
 		}
 		/** InstalledVersion → PluginEntry（仓库预览面板复用；仅 owner/name/htmlUrl 有效）。 */
 		function toPluginEntry(v) {
@@ -1691,12 +1717,10 @@ window.__ModuleLoader__.load({
 					color: "#fff",
 					padding: "6px 14px",
 					fontSize: 12,
-					fontWeight: 600,
-					opacity: updatable.length === 0 ? .5 : 1,
-					cursor: updatable.length === 0 ? "default" : "pointer"
+					fontWeight: 600
 				},
-				onClick: onUpdateAll,
-				disabled: updatable.length === 0
+				title: updatable.length > 0 ? `${t("updateAll")} (${updatable.length})` : t("updateEmpty"),
+				onClick: onUpdateAll
 			}, `${t("updateAll")}${updatable.length > 0 ? ` (${updatable.length})` : ""}`), (0, react.createElement)("span", { style: {
 				fontSize: 11,
 				color: "var(--dsw-alias-label-secondary, #7c7c9c)"
