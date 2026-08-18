@@ -1590,15 +1590,30 @@ window.__ModuleLoader__.load({
 			}), tab === "installed" && (0, react.createElement)(InstalledPanel, {
 				t,
 				versions: installedVersions,
-				onUpdateAll: handleUpdateAll
+				onUpdateAll: handleUpdateAll,
+				onViewRepo: (v) => setPreview(toPluginEntry(v))
 			}), preview !== null && (0, react.createElement)(RepoPreview, {
 				plugin: preview,
 				t,
 				onClose: () => setPreview(null)
 			}));
 		}
+		/** InstalledVersion → PluginEntry（仓库预览面板复用；仅 owner/name/htmlUrl 有效）。 */
+		function toPluginEntry(v) {
+			const parts = (v.repo ?? `${v.name}/${v.name}`).split("/");
+			return {
+				name: parts[1] ?? v.name,
+				owner: parts[0] ?? "",
+				description: "",
+				stars: 0,
+				language: null,
+				updatedAt: v.remotePushedAt ?? "",
+				htmlUrl: v.repo !== null ? `https://github.com/${v.repo}` : "",
+				topics: []
+			};
+		}
 		/** 已安装 tab：顶部紧凑一键更新 + 卡片式插件列表（npm + GitHub 多源比对结果）。 */
-		function InstalledPanel({ t, versions, onUpdateAll }) {
+		function InstalledPanel({ t, versions, onUpdateAll, onViewRepo }) {
 			const updatable = (versions ?? []).filter((p) => p.hasUpdate);
 			const badgeOf = (p) => {
 				const base = {
@@ -1708,11 +1723,12 @@ window.__ModuleLoader__.load({
 			} }, (0, react.createElement)(PluginIcon, { size: 14 })), (0, react.createElement)("div", { style: { minWidth: 0 } }, (0, react.createElement)("div", { style: nameStyle }, p.name), p.repo !== null && (0, react.createElement)("div", { style: ownerStyle }, p.repo)), (0, react.createElement)("span", { style: badgeOf(p).style }, badgeOf(p).text)), (0, react.createElement)("div", { style: {
 				fontSize: 12,
 				color: "var(--dsw-alias-label-primary, #e0e0f0)"
-			} }, versionLine(p)), (0, react.createElement)("div", { style: metaStyle }, metaLine(p)), (0, react.createElement)("div", { style: cardFooterStyle }, (0, react.createElement)("div", { style: cardBtnGroupStyle }, p.repo !== null && (0, react.createElement)("a", {
-				href: `https://github.com/${p.repo}`,
-				target: "_blank",
-				rel: "noreferrer",
-				style: repoBtnStyle
+			} }, versionLine(p)), (0, react.createElement)("div", { style: metaStyle }, metaLine(p)), (0, react.createElement)("div", { style: cardFooterStyle }, (0, react.createElement)("div", { style: cardBtnGroupStyle }, p.repo !== null && (0, react.createElement)("button", {
+				type: "button",
+				className: "dshd-btn",
+				style: repoBtnStyle,
+				title: t("viewRepo"),
+				onClick: () => onViewRepo(p)
 			}, t("viewRepo")))))))));
 		}
 		function apply(ctx) {
