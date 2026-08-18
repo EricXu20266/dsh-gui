@@ -1,4 +1,4 @@
-﻿# Changelog — 2026-08-19
+# Changelog — 2026-08-19
 
 ## DHS 内核升级 0.1.0-rc.7（依赖同步）
 - 升级 DHS 内核到 `0.1.0-rc.7`（官方 release），workspace 依赖同步
@@ -9,4 +9,5 @@
 - DSH-GUI 侧 typecheck / biome（71 文件）/ test（4/4）全绿
 
 ## 备注
-- DHS 内核 `ui-sidebar` 含 dsh-gui 定制（`sidebar.primary.action` slot，供插件市场等 5 个插件挂载）——未提交到 DHS 仓库，保持工作区改动；每次 DHS 升级 pull 前需注意该文件
+- DHS 内核 `ui-sidebar` 含 dsh-gui 定制（`sidebar.primary.action` slot，供插件市场等 5 个插件挂载）——**Eric 决策：保持现状，不提交到 DHS 仓库**，每次 DHS 升级后手工重打补丁
+- 定制 diff 已导出：`docs/reference/dhs-kernel-custom-rc7.patch`——下次升级 pull 冲突时 `git -C ../deepseek-harness apply ../dsh-gui/docs/reference/dhs-kernel-custom-rc7.patch` 重打，冲突处按上下文微调（涉及文件：ui-sidebar 的 `SidebarRoot.module.css` / `SidebarRoot.tsx` / `contract/slots.ts` / `client/index.ts`）

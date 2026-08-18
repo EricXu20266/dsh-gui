@@ -1,0 +1,97 @@
+diff --git a/packages/client/ui-sidebar/src/client/SidebarRoot.module.css b/packages/client/ui-sidebar/src/client/SidebarRoot.module.css
+index 300075b88d..7572cfb127 100644
+--- a/packages/client/ui-sidebar/src/client/SidebarRoot.module.css
++++ b/packages/client/ui-sidebar/src/client/SidebarRoot.module.css
+@@ -217,6 +217,20 @@
+   white-space: nowrap;
+ }
+ 
++/* Primary actions under New Session: stacked entries in wide mode, icon
++   column in the 56px rail. Kept tight so the browsing region keeps its room. */
++.primaryActions {
++  display: flex;
++  flex-direction: column;
++  gap: 2px;
++  padding: 0 2px 4px;
++}
++
++.collapsed .primaryActions {
++  align-items: flex-start;
++  padding: 0 0 8px;
++}
++
+ .collapsed .newSessionLabel {
+   max-width: 0;
+ }
+diff --git a/packages/client/ui-sidebar/src/client/SidebarRoot.tsx b/packages/client/ui-sidebar/src/client/SidebarRoot.tsx
+index d3fe6a63c1..62cd7c8751 100644
+--- a/packages/client/ui-sidebar/src/client/SidebarRoot.tsx
++++ b/packages/client/ui-sidebar/src/client/SidebarRoot.tsx
+@@ -169,6 +169,12 @@ export function SidebarRoot({
+         </button>
+       </Tooltip>
+ 
++      {/* Primary actions ride directly under New Session (dsh-gui feature
++          entries, e.g. the plugin market); rail state renders one icon each. */}
++      <div className={css.primaryActions}>
++        {renderSlot('sidebar.primary.action', { wide })}
++      </div>
++
+       {/* The browsing region fills the column between the controls and the
+           foot in both states; its rail icon column rides the same slot. */}
+       <div className={css.regionArea}>
+diff --git a/packages/client/ui-sidebar/src/client/contract/slots.ts b/packages/client/ui-sidebar/src/client/contract/slots.ts
+index a8c4f2894d..ff50e4ef7f 100644
+--- a/packages/client/ui-sidebar/src/client/contract/slots.ts
++++ b/packages/client/ui-sidebar/src/client/contract/slots.ts
+@@ -33,9 +33,22 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
+      * package's 'sidebar' entry; each action receives only the column state.
+      */
+     'sidebar.footer.action': { kind: 'list'; scope: 'root'; owner: SidebarFooterActionOwnerProps }
++    /**
++     * Primary actions directly under the New Session control, above the
++     * workspace/session browsing region. Declared by this package's 'sidebar'
++     * entry; dsh-gui plugins register feature entry points here (e.g. the
++     * plugin market). Each action receives only the column state.
++     */
++    'sidebar.primary.action': { kind: 'list'; scope: 'root'; owner: SidebarPrimaryActionOwnerProps }
+   }
+ }
+ 
++/** Owner share of a primary action rendered under the New Session control. */
++export interface SidebarPrimaryActionOwnerProps {
++  /** Whether the sidebar renders wide content (false = 56px rail). */
++  wide: boolean
++}
++
+ /**
+  * Owner share of the browser hole — the only facts crossing the shell/region
+  * boundary. Business data and actions arrive through the region's own inject.
+@@ -85,5 +98,5 @@ export type SidebarRootInjected = {
+  */
+ export type SidebarRootComponentProps =
+   PropsRuntime<'sidebar'>
+-  & PropsRenderSlots<'sidebar.workspaces' | 'sidebar.settings' | 'sidebar.footer.action'>
++  & PropsRenderSlots<'sidebar.workspaces' | 'sidebar.settings' | 'sidebar.footer.action' | 'sidebar.primary.action'>
+   & SidebarRootInjected & PropsLocale<'sidebar'>
+diff --git a/packages/client/ui-sidebar/src/client/index.ts b/packages/client/ui-sidebar/src/client/index.ts
+index 0bd2c98295..622f7c28f1 100644
+--- a/packages/client/ui-sidebar/src/client/index.ts
++++ b/packages/client/ui-sidebar/src/client/index.ts
+@@ -8,7 +8,7 @@ import { en, zh, type SidebarKey } from './locales.ts'
+ 
+ export type {
+   SidebarFooterActionOwnerProps, SidebarRootComponentProps, SidebarRootInjected,
+-  SidebarSectionOwnerProps, SidebarSettingsOwnerProps,
++  SidebarPrimaryActionOwnerProps, SidebarSectionOwnerProps, SidebarSettingsOwnerProps,
+ } from './contract/slots.ts'
+ export type { SidebarKey } from './locales.ts'
+ 
+@@ -48,6 +48,7 @@ export function apply(ctx: ClientContext): void {
+         'sidebar.workspaces': { kind: 'single', scope: 'root' },
+         'sidebar.settings': { kind: 'single', scope: 'root' },
+         'sidebar.footer.action': { kind: 'list', scope: 'root' },
++        'sidebar.primary.action': { kind: 'list', scope: 'root' },
+       },
+       inject: injectProps,
+     }, SidebarRoot),
