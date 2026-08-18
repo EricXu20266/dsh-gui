@@ -1617,7 +1617,8 @@ window.__ModuleLoader__.load({
 				t,
 				versions: installedVersions,
 				onUpdateAll: handleUpdateAll,
-				onViewRepo: (v) => setPreview(toPluginEntry(v))
+				onViewRepo: (v) => setPreview(toPluginEntry(v)),
+				onCheckUpdate: (v) => handleCheckUpdate(toPluginEntry(v))
 			}), preview !== null && (0, react.createElement)(RepoPreview, {
 				plugin: preview,
 				t,
@@ -1639,7 +1640,7 @@ window.__ModuleLoader__.load({
 			};
 		}
 		/** 已安装 tab：顶部紧凑一键更新 + 卡片式插件列表（npm + GitHub 多源比对结果）。 */
-		function InstalledPanel({ t, versions, onUpdateAll, onViewRepo }) {
+		function InstalledPanel({ t, versions, onUpdateAll, onViewRepo, onCheckUpdate }) {
 			const updatable = (versions ?? []).filter((p) => p.hasUpdate);
 			const badgeOf = (p) => {
 				const base = {
@@ -1747,7 +1748,13 @@ window.__ModuleLoader__.load({
 			} }, (0, react.createElement)(PluginIcon, { size: 14 })), (0, react.createElement)("div", { style: { minWidth: 0 } }, (0, react.createElement)("div", { style: nameStyle }, p.name), p.repo !== null && (0, react.createElement)("div", { style: ownerStyle }, p.repo)), (0, react.createElement)("span", { style: badgeOf(p).style }, badgeOf(p).text)), (0, react.createElement)("div", { style: {
 				fontSize: 12,
 				color: "var(--dsw-alias-label-primary, #e0e0f0)"
-			} }, versionLine(p)), (0, react.createElement)("div", { style: metaStyle }, metaLine(p)), (0, react.createElement)("div", { style: cardFooterStyle }, (0, react.createElement)("div", { style: cardBtnGroupStyle }, p.repo !== null && (0, react.createElement)("button", {
+			} }, versionLine(p)), (0, react.createElement)("div", { style: metaStyle }, metaLine(p)), (0, react.createElement)("div", { style: cardFooterStyle }, (0, react.createElement)("div", { style: cardBtnGroupStyle }, p.hasUpdate && (0, react.createElement)("button", {
+				type: "button",
+				className: "dshd-btn",
+				style: cardBtnPrimaryStyle,
+				title: t("checkUpdate"),
+				onClick: () => onCheckUpdate(p)
+			}, t("checkUpdate")), p.repo !== null && (0, react.createElement)("button", {
 				type: "button",
 				className: "dshd-btn",
 				style: repoBtnStyle,
